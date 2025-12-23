@@ -1,13 +1,34 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Layout } from "@/components/layout/Layout";
+import { HeroSection } from "@/components/home/HeroSection";
+import { FeaturedProducts } from "@/components/home/FeaturedProducts";
+import { ServicesSection } from "@/components/home/ServicesSection";
+import { WhyChooseUs } from "@/components/home/WhyChooseUs";
+import { CTASection } from "@/components/home/CTASection";
+import { Helmet } from "react-helmet-async";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      <Helmet>
+        <title>CoolTech Refrigeration - Cold Rooms, Ice Machines & HVAC in Kenya</title>
+        <meta
+          name="description"
+          content="Kenya's leading supplier of refrigeration equipment, cold rooms, ice machines, and HVAC systems. Quality products and expert services in Nairobi."
+        />
+        <meta
+          name="keywords"
+          content="Cold room masters Kenya, Cold rooms Kenya, Ice Block Machines Kenya, Ice Makers Kenya, HVAC Kenya, Refrigeration Nairobi"
+        />
+        <link rel="canonical" href="https://cooltechrefrigeration.co.ke" />
+      </Helmet>
+      <Layout>
+        <HeroSection />
+        <FeaturedProducts />
+        <ServicesSection />
+        <WhyChooseUs />
+        <CTASection />
+      </Layout>
+    </>
   );
 };
 
