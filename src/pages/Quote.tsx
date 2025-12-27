@@ -5,14 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { products, services } from "@/data/products";
-import { FileText, Send } from "lucide-react";
+import { FileText, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { quotesApi, QuoteRequest } from "@/services/apiService";
+import { useApiMutation } from "@/hooks/useApi";
 
 const Quote = () => {
-  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const preselectedProduct = searchParams.get("product") || "";
   
@@ -21,30 +21,50 @@ const Quote = () => {
     email: "",
     phone: "",
     company: "",
-    requestType: "",
+    requestType: "" as "product" | "service" | "both" | "",
     product: preselectedProduct,
     service: "",
     quantity: "",
     details: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { mutate, isLoading } = useApiMutation<QuoteRequest, { id: string }>(
+    quotesApi.submit,
+    {
+      successMessage: "Quotation request submitted! We'll get back to you within 24 hours.",
+      errorMessage: "Failed to submit quote request. Please try again or contact us directly.",
+    }
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Quotation Request Submitted!",
-      description: "We'll get back to you within 24 hours with a detailed quote.",
-    });
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      company: "",
-      requestType: "",
-      product: "",
-      service: "",
-      quantity: "",
-      details: "",
-    });
+    
+    const payload: QuoteRequest = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      company: formData.company || undefined,
+      requestType: formData.requestType as "product" | "service" | "both",
+      products: formData.product ? [formData.product] : undefined,
+      services: formData.service ? [formData.service] : undefined,
+      message: `Quantity: ${formData.quantity || "Not specified"}\n\n${formData.details}`,
+    };
+
+    const result = await mutate(payload);
+    
+    if (result.success) {
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        company: "",
+        requestType: "",
+        product: "",
+        service: "",
+        quantity: "",
+        details: "",
+      });
+    }
   };
 
   return (
@@ -91,6 +111,7 @@ const Quote = () => {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="John Doe"
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -101,6 +122,7 @@ const Quote = () => {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="john@example.com"
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -111,6 +133,7 @@ const Quote = () => {
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="+254 7XX XXX XXX"
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -119,6 +142,7 @@ const Quote = () => {
                         value={formData.company}
                         onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                         placeholder="Your Company"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -128,7 +152,8 @@ const Quote = () => {
                     <label className="text-sm font-medium">Request Type *</label>
                     <Select
                       value={formData.requestType}
-                      onValueChange={(value) => setFormData({ ...formData, requestType: value })}
+                      onValueChange={(value) => setFormData({ ...formData, requestType: value as any })}
+                      disabled={isLoading}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select request type" />
@@ -149,6 +174,7 @@ const Quote = () => {
                         <Select
                           value={formData.product}
                           onValueChange={(value) => setFormData({ ...formData, product: value })}
+                          disabled={isLoading}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select a product" />
@@ -170,6 +196,7 @@ const Quote = () => {
                           value={formData.quantity}
                           onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                           placeholder="1"
+                          disabled={isLoading}
                         />
                       </div>
                     </div>
@@ -182,6 +209,7 @@ const Quote = () => {
                       <Select
                         value={formData.service}
                         onValueChange={(value) => setFormData({ ...formData, service: value })}
+                        disabled={isLoading}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a service" />
@@ -205,12 +233,22 @@ const Quote = () => {
                       onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                       placeholder="Please provide any specific requirements, dimensions, or questions you have..."
                       rows={5}
+                      disabled={isLoading}
                     />
                   </div>
 
-                  <Button type="submit" variant="hero" size="lg" className="w-full">
-                    <Send className="h-5 w-5 mr-2" />
-                    Submit Quote Request
+                  <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5 mr-2" />
+                        Submit Quote Request
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>

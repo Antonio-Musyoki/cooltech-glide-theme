@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, Mail, MapPin, Clock, Send } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { Helmet } from "react-helmet-async";
+import { contactApi, ContactRequest } from "@/services/apiService";
+import { useApiMutation } from "@/hooks/useApi";
 
 const Contact = () => {
-  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -18,19 +18,36 @@ const Contact = () => {
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { mutate, isLoading } = useApiMutation<ContactRequest, { id: string }>(
+    contactApi.submit,
+    {
+      successMessage: "Message sent! We'll respond within 24 hours.",
+      errorMessage: "Failed to send message. Please try again or contact us directly.",
+    }
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Message Sent!",
-      description: "Thank you for reaching out. We'll respond within 24 hours.",
-    });
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    });
+    
+    const payload: ContactRequest = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || undefined,
+      subject: formData.subject,
+      message: formData.message,
+    };
+
+    const result = await mutate(payload);
+    
+    if (result.success) {
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+      });
+    }
   };
 
   const contactInfo = [
@@ -129,6 +146,7 @@ const Contact = () => {
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             placeholder="John Doe"
+                            disabled={isLoading}
                           />
                         </div>
                         <div className="space-y-2">
@@ -139,6 +157,7 @@ const Contact = () => {
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             placeholder="john@example.com"
+                            disabled={isLoading}
                           />
                         </div>
                       </div>
@@ -151,6 +170,7 @@ const Contact = () => {
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="+254 7XX XXX XXX"
+                            disabled={isLoading}
                           />
                         </div>
                         <div className="space-y-2">
@@ -160,6 +180,7 @@ const Contact = () => {
                             value={formData.subject}
                             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                             placeholder="How can we help?"
+                            disabled={isLoading}
                           />
                         </div>
                       </div>
@@ -172,12 +193,22 @@ const Contact = () => {
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           placeholder="Tell us more about your inquiry..."
                           rows={5}
+                          disabled={isLoading}
                         />
                       </div>
 
-                      <Button type="submit" variant="hero" size="lg" className="w-full">
-                        <Send className="h-5 w-5 mr-2" />
-                        Send Message
+                      <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-5 w-5 mr-2" />
+                            Send Message
+                          </>
+                        )}
                       </Button>
                     </form>
                   </CardContent>
