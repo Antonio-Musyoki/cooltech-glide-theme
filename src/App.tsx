@@ -8,6 +8,7 @@ import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { AdminProtectedRoute } from "@/components/admin/AdminProtectedRoute";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
 import Services from "./pages/Services";
 import Quote from "./pages/Quote";
 import Booking from "./pages/Booking";
@@ -36,6 +37,7 @@ const App = () => (
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/shop" element={<Shop />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/services" element={<Services />} />
               <Route path="/quote" element={<Quote />} />
               <Route path="/booking" element={<Booking />} />
