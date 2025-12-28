@@ -1,0 +1,24 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Handle CORS preflight requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Route requests to appropriate PHP files
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^auth$ auth.php [L,QSA]
+RewriteRule ^products$ products.php [L,QSA]
+RewriteRule ^quotes$ quotes.php [L,QSA]
+RewriteRule ^bookings$ bookings.php [L,QSA]
+RewriteRule ^contacts$ contacts.php [L,QSA]
+RewriteRule ^dashboard$ dashboard.php [L,QSA]
+RewriteRule ^upload$ upload.php [L,QSA]
+
+# Set CORS headers
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
