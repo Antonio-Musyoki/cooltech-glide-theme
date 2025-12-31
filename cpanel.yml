@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/cooltec1/public_html/test.cooltechrefrigeration.co.ke
+    - /bin/cp -R build/* $DEPLOYPATH
