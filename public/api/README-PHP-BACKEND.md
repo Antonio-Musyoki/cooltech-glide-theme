@@ -9,13 +9,57 @@ public_html/
 ├── api/
 │   ├── .htaccess
 │   ├── config.php
+│   ├── email-templates.php   # HTML email templates
+│   ├── send-email.php        # Email sending service
 │   ├── products.php
 │   ├── services.php
 │   ├── quotes.php
 │   ├── bookings.php
-│   └── contact.php
+│   ├── contact.php
+│   └── admin/
+│       ├── .htaccess
+│       ├── auth.php
+│       ├── dashboard.php
+│       ├── products.php
+│       ├── quotes.php
+│       ├── bookings.php
+│       ├── contacts.php
+│       └── upload.php
 └── (React build files)
 ```
+
+## Email Notification System
+
+The API includes an automated email notification system that sends:
+
+### Customer Confirmations
+- **Quote requests**: Professional HTML email confirming receipt with reference number
+- **Booking requests**: Appointment details with date, time, and next steps
+- **Contact form**: Acknowledgment with expected response time
+
+### Admin Notifications
+- Real-time alerts for all new submissions
+- Customer contact details with click-to-call/email buttons
+- Full submission details in formatted HTML emails
+
+### Email Configuration
+
+Update these values in `send-email.php`:
+
+```php
+define('SMTP_FROM_NAME', 'CoolTech Refrigeration');
+define('SMTP_FROM_EMAIL', 'noreply@cooltechrefrigeration.co.ke');
+define('ADMIN_NOTIFICATION_EMAIL', 'info@cooltechrefrigeration.co.ke');
+```
+
+### Email Testing
+
+To test email functionality on cPanel:
+1. Ensure PHP `mail()` function is enabled
+2. Check that your domain has proper SPF/DKIM records
+3. Test with a valid email address
+4. Check spam folders if emails don't arrive
+5. Review PHP error logs for any mail() failures
 
 ## .htaccess (Enable API routing)
 
