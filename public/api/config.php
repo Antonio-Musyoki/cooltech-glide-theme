@@ -6,9 +6,9 @@
 
 // Database configuration
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'your_database_name');
-define('DB_USER', 'your_database_user');
-define('DB_PASS', 'your_database_password');
+define('DB_NAME', 'cooltec1_RCT2026');
+define('DB_USER', 'cooltec1_anto');
+define('DB_PASS', 'A007134858u#');
 
 // Email configuration
 define('ADMIN_EMAIL', 'info@cooltechrefrigeration.co.ke');
