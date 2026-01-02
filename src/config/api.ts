@@ -1,4 +1,5 @@
 // Configure your external API base URL here
+const API_BASE_URL = 'https://test.cooltechrefrigeration.co.ke/api';
 // For cPanel PHP backend, this would be something like: https://yourdomain.com/api
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
