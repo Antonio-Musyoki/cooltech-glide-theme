@@ -1,75 +1,80 @@
 <?php
-require_once '../config.php';
+/**
+ * Admin Dashboard API
+ * Returns statistics and recent activity
+ */
+
+require_once __DIR__ . '/../config.php';
 
 // Verify admin authentication
-function verifyAdmin() {
-    $headers = getallheaders();
-    $token = $headers['Authorization'] ?? '';
-    $token = str_replace('Bearer ', '', $token);
-    
-    if (empty($token)) {
-        jsonResponse(['error' => 'Unauthorized'], 401);
-    }
-    
-    $db = getDB();
-    $stmt = $db->prepare("
-        SELECT u.id FROM admin_users u 
-        JOIN admin_sessions s ON u.id = s.user_id 
-        WHERE s.token = ? AND s.expires_at > NOW() AND u.is_active = 1
-    ");
-    $stmt->execute([$token]);
-    
-    if (!$stmt->fetch()) {
-        jsonResponse(['error' => 'Unauthorized'], 401);
-    }
-}
-
-verifyAdmin();
+verifyAdminAuth();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-if ($method === 'GET') {
+if ($method !== 'GET') {
+    jsonResponse(['error' => 'Method not allowed'], 405);
+}
+
+try {
     $db = getDB();
     
-    // Get total products
+    // Get total products count
     $stmt = $db->query("SELECT COUNT(*) as count FROM products");
-    $totalProducts = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    $totalProducts = (int)($stmt->fetch()['count'] ?? 0);
     
-    // Get pending quotes
+    // Get pending quotes count
     $stmt = $db->query("SELECT COUNT(*) as count FROM quotes WHERE status = 'pending'");
-    $pendingQuotes = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    $pendingQuotes = (int)($stmt->fetch()['count'] ?? 0);
     
-    // Get pending bookings
+    // Get pending bookings count
     $stmt = $db->query("SELECT COUNT(*) as count FROM bookings WHERE status = 'pending'");
-    $pendingBookings = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    $pendingBookings = (int)($stmt->fetch()['count'] ?? 0);
     
-    // Get unread contacts
-    $stmt = $db->query("SELECT COUNT(*) as count FROM contacts WHERE status = 'unread'");
-    $unreadContacts = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    // Get unread/new contacts count
+    $stmt = $db->query("SELECT COUNT(*) as count FROM contacts WHERE status IN ('new', 'unread')");
+    $unreadContacts = (int)($stmt->fetch()['count'] ?? 0);
     
-    // Get recent quotes
-    $stmt = $db->query("SELECT id, name, product_type, status, created_at FROM quotes ORDER BY created_at DESC LIMIT 5");
+    // Get recent quotes (last 5)
+    $stmt = $db->query("
+        SELECT id, name, email, request_type as requestType, status, created_at 
+        FROM quotes 
+        ORDER BY created_at DESC 
+        LIMIT 5
+    ");
     $recentQuotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Get recent bookings
-    $stmt = $db->query("SELECT id, name, service_type, status, preferred_date, created_at FROM bookings ORDER BY created_at DESC LIMIT 5");
+    // Get recent bookings (last 5)
+    $stmt = $db->query("
+        SELECT id, name, service, preferred_date as preferredDate, status, created_at 
+        FROM bookings 
+        ORDER BY created_at DESC 
+        LIMIT 5
+    ");
     $recentBookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Get recent contacts
-    $stmt = $db->query("SELECT id, name, subject, status, created_at FROM contacts ORDER BY created_at DESC LIMIT 5");
+    // Get recent contacts (last 5)
+    $stmt = $db->query("
+        SELECT id, name, email, subject, status, created_at 
+        FROM contacts 
+        ORDER BY created_at DESC 
+        LIMIT 5
+    ");
     $recentContacts = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     jsonResponse([
+        'success' => true,
         'stats' => [
-            'totalProducts' => (int)$totalProducts,
-            'pendingQuotes' => (int)$pendingQuotes,
-            'pendingBookings' => (int)$pendingBookings,
-            'unreadContacts' => (int)$unreadContacts
+            'totalProducts' => $totalProducts,
+            'pendingQuotes' => $pendingQuotes,
+            'pendingBookings' => $pendingBookings,
+            'unreadContacts' => $unreadContacts
         ],
         'recentQuotes' => $recentQuotes,
         'recentBookings' => $recentBookings,
         'recentContacts' => $recentContacts
     ]);
-} else {
-    jsonResponse(['error' => 'Method not allowed'], 405);
+    
+} catch (Exception $e) {
+    error_log("Dashboard error: " . $e->getMessage());
+    jsonResponse(['error' => 'Failed to load dashboard data'], 500);
 }

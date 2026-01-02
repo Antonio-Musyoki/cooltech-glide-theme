@@ -1,50 +1,61 @@
 <?php
-require_once 'config.php';
-require_once 'send-email.php';
+/**
+ * Public Contact Form API
+ * Handles contact form submissions from the frontend
+ */
+
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/send-email.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['success' => false, 'error' => 'Method not allowed'], 405);
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$input = getJsonInput();
+
+if (!$input) {
+    jsonResponse(['success' => false, 'error' => 'Invalid JSON input'], 400);
+}
 
 // Validate required fields
 $required = ['name', 'email', 'subject', 'message'];
 foreach ($required as $field) {
     if (empty($input[$field])) {
-        jsonResponse(['success' => false, 'error' => "Missing required field: $field"], 400);
+        jsonResponse(['success' => false, 'error' => "Missing required field: {$field}"], 400);
     }
 }
 
 // Validate email format
-if (!filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
+if (!isValidEmail($input['email'])) {
     jsonResponse(['success' => false, 'error' => 'Invalid email format'], 400);
 }
 
 // Sanitize input
-$name = htmlspecialchars(trim($input['name']), ENT_QUOTES, 'UTF-8');
+$name = sanitize($input['name'], 100);
 $email = filter_var(trim($input['email']), FILTER_SANITIZE_EMAIL);
-$phone = htmlspecialchars(trim($input['phone'] ?? ''), ENT_QUOTES, 'UTF-8');
-$subject = htmlspecialchars(trim($input['subject']), ENT_QUOTES, 'UTF-8');
-$message = htmlspecialchars(trim($input['message']), ENT_QUOTES, 'UTF-8');
+$phone = sanitize($input['phone'] ?? '', 50);
+$subject = sanitize($input['subject'], 255);
+$message = sanitize($input['message'], 5000);
 
 // Validate lengths
-if (strlen($name) > 100) {
-    jsonResponse(['success' => false, 'error' => 'Name is too long'], 400);
+if (mb_strlen($name) < 2) {
+    jsonResponse(['success' => false, 'error' => 'Name is too short'], 400);
 }
-if (strlen($subject) > 255) {
-    jsonResponse(['success' => false, 'error' => 'Subject is too long'], 400);
+if (mb_strlen($subject) < 3) {
+    jsonResponse(['success' => false, 'error' => 'Subject is too short'], 400);
 }
-if (strlen($message) > 5000) {
-    jsonResponse(['success' => false, 'error' => 'Message is too long'], 400);
+if (mb_strlen($message) < 10) {
+    jsonResponse(['success' => false, 'error' => 'Message is too short'], 400);
 }
 
 try {
     $db = getDB();
+    
     $stmt = $db->prepare("
-        INSERT INTO contacts (name, email, phone, subject, message)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO contacts (name, email, phone, subject, message, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 'new', NOW())
     ");
+    
     $stmt->execute([$name, $email, $phone, $subject, $message]);
     
     $contactId = $db->lastInsertId();
@@ -59,17 +70,16 @@ try {
         'message' => $message
     ];
     
-    // Send confirmation emails
+    // Send confirmation emails (don't fail request if email fails)
     try {
         sendContactEmails($contactData);
     } catch (Exception $emailError) {
-        // Log email error but don't fail the request
         error_log("Email sending failed for contact #{$contactId}: " . $emailError->getMessage());
     }
     
     jsonResponse([
-        'success' => true, 
-        'data' => ['id' => $contactId],
+        'success' => true,
+        'data' => ['id' => (int)$contactId],
         'message' => 'Message sent successfully. We will respond within 1-2 business days.'
     ]);
     
