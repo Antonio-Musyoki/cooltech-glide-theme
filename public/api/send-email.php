@@ -20,7 +20,7 @@ define('ADMIN_NOTIFICATION_EMAIL', 'info@cooltechrefrigeration.co.ke');
  * @param array $options Additional options (replyTo, cc, bcc)
  * @return bool Success status
  */
-function sendEmail($to, $subject, $htmlBody, $options = []) {
+function sendEmail(string $to, string $subject, string $htmlBody, array $options = []): bool {
     $fromName = SMTP_FROM_NAME;
     $fromEmail = SMTP_FROM_EMAIL;
     
@@ -53,7 +53,7 @@ function sendEmail($to, $subject, $htmlBody, $options = []) {
     error_log("Sending email to: {$to}, Subject: {$subject}");
     
     // Send email
-    $result = mail($to, $subject, $htmlBody, $headersString);
+    $result = @mail($to, $subject, $htmlBody, $headersString);
     
     if (!$result) {
         error_log("Email sending failed to: {$to}");
@@ -65,7 +65,7 @@ function sendEmail($to, $subject, $htmlBody, $options = []) {
 /**
  * Send quote confirmation emails (to customer and admin)
  */
-function sendQuoteEmails($quoteData) {
+function sendQuoteEmails(array $quoteData): bool {
     $customerEmail = $quoteData['email'];
     $customerName = $quoteData['name'];
     
@@ -92,7 +92,7 @@ function sendQuoteEmails($quoteData) {
 /**
  * Send booking confirmation emails (to customer and admin)
  */
-function sendBookingEmails($bookingData) {
+function sendBookingEmails(array $bookingData): bool {
     $customerEmail = $bookingData['email'];
     $customerName = $bookingData['name'];
     $service = $bookingData['service'];
@@ -121,7 +121,7 @@ function sendBookingEmails($bookingData) {
 /**
  * Send contact form confirmation emails (to customer and admin)
  */
-function sendContactEmails($contactData) {
+function sendContactEmails(array $contactData): bool {
     $customerEmail = $contactData['email'];
     $customerName = $contactData['name'];
     $subject = $contactData['subject'];

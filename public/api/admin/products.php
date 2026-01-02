@@ -1,148 +1,286 @@
 <?php
-require_once '../config.php';
+/**
+ * Admin Products API
+ * CRUD operations for products management
+ */
 
-// Verify admin authentication
-function verifyAdmin() {
-    $headers = getallheaders();
-    $token = $headers['Authorization'] ?? '';
-    $token = str_replace('Bearer ', '', $token);
-    
-    if (empty($token)) {
-        jsonResponse(['error' => 'Unauthorized'], 401);
-    }
-    
-    $db = getDB();
-    $stmt = $db->prepare("
-        SELECT u.id FROM admin_users u 
-        JOIN admin_sessions s ON u.id = s.user_id 
-        WHERE s.token = ? AND s.expires_at > NOW() AND u.is_active = 1
-    ");
-    $stmt->execute([$token]);
-    
-    if (!$stmt->fetch()) {
-        jsonResponse(['error' => 'Unauthorized'], 401);
-    }
-}
+require_once __DIR__ . '/../config.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// GET requests don't require authentication (public product listing)
+// All other methods require admin authentication
 if ($method !== 'GET') {
-    verifyAdmin();
+    verifyAdminAuth();
 }
 
 $db = getDB();
 
-if ($method === 'GET') {
+switch ($method) {
+    case 'GET':
+        handleGet($db);
+        break;
+    case 'POST':
+        handlePost($db);
+        break;
+    case 'PUT':
+        handlePut($db);
+        break;
+    case 'DELETE':
+        handleDelete($db);
+        break;
+    default:
+        jsonResponse(['error' => 'Method not allowed'], 405);
+}
+
+/**
+ * Handle GET requests - List or get single product
+ */
+function handleGet(PDO $db): void {
     $id = $_GET['id'] ?? null;
     
     if ($id) {
+        // Get single product
         $stmt = $db->prepare("SELECT * FROM products WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt->execute([(int)$id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($product) {
-            $product['tags'] = json_decode($product['tags'], true) ?? [];
-            $product['images'] = json_decode($product['images'], true) ?? [];
-            jsonResponse($product);
-        } else {
+        if (!$product) {
             jsonResponse(['error' => 'Product not found'], 404);
         }
-    } else {
-        $category = $_GET['category'] ?? null;
-        $search = $_GET['search'] ?? null;
         
-        $sql = "SELECT * FROM products WHERE 1=1";
-        $params = [];
+        // Decode JSON fields
+        $product['tags'] = json_decode($product['tags'] ?? '[]', true) ?: [];
+        $product['images'] = json_decode($product['images'] ?? '[]', true) ?: [];
+        $product['specifications'] = json_decode($product['specifications'] ?? '[]', true) ?: [];
+        $product['features'] = json_decode($product['features'] ?? '[]', true) ?: [];
         
-        if ($category) {
-            $sql .= " AND category = ?";
-            $params[] = $category;
-        }
-        
-        if ($search) {
-            $sql .= " AND (name LIKE ? OR description LIKE ?)";
-            $params[] = "%$search%";
-            $params[] = "%$search%";
-        }
-        
-        $sql .= " ORDER BY created_at DESC";
-        
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        foreach ($products as &$product) {
-            $product['tags'] = json_decode($product['tags'], true) ?? [];
-            $product['images'] = json_decode($product['images'], true) ?? [];
-        }
-        
-        jsonResponse($products);
+        jsonResponse(['success' => true, 'product' => $product]);
     }
-} elseif ($method === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
     
-    $name = sanitize($data['name'] ?? '');
-    $description = sanitize($data['description'] ?? '');
-    $category = sanitize($data['category'] ?? '');
+    // List products with optional filters
+    $category = $_GET['category'] ?? null;
+    $search = $_GET['search'] ?? null;
+    $featured = $_GET['featured'] ?? null;
+    $inStock = $_GET['in_stock'] ?? null;
+    
+    $sql = "SELECT * FROM products WHERE 1=1";
+    $params = [];
+    
+    if ($category) {
+        $sql .= " AND category = ?";
+        $params[] = $category;
+    }
+    
+    if ($search) {
+        $sql .= " AND (name LIKE ? OR description LIKE ?)";
+        $searchTerm = "%{$search}%";
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+    }
+    
+    if ($featured !== null) {
+        $sql .= " AND featured = ?";
+        $params[] = (int)$featured;
+    }
+    
+    if ($inStock !== null) {
+        $sql .= " AND in_stock = ?";
+        $params[] = (int)$inStock;
+    }
+    
+    $sql .= " ORDER BY featured DESC, created_at DESC";
+    
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Decode JSON fields for each product
+    foreach ($products as &$product) {
+        $product['tags'] = json_decode($product['tags'] ?? '[]', true) ?: [];
+        $product['images'] = json_decode($product['images'] ?? '[]', true) ?: [];
+    }
+    
+    jsonResponse(['success' => true, 'products' => $products]);
+}
+
+/**
+ * Handle POST requests - Create new product
+ */
+function handlePost(PDO $db): void {
+    $data = getJsonInput();
+    
+    if (!$data) {
+        jsonResponse(['error' => 'Invalid JSON input'], 400);
+    }
+    
+    // Validate required fields
+    $name = trim($data['name'] ?? '');
+    $category = trim($data['category'] ?? '');
+    
+    if (empty($name)) {
+        jsonResponse(['error' => 'Product name is required'], 400);
+    }
+    
+    if (empty($category)) {
+        jsonResponse(['error' => 'Product category is required'], 400);
+    }
+    
+    // Generate slug from name
+    $slug = generateSlug($name);
+    
+    // Check if slug exists
+    $stmt = $db->prepare("SELECT id FROM products WHERE slug = ?");
+    $stmt->execute([$slug]);
+    if ($stmt->fetch()) {
+        $slug .= '-' . time();
+    }
+    
+    // Prepare data
+    $description = sanitize($data['description'] ?? '', 1000);
+    $fullDescription = sanitize($data['full_description'] ?? '', 5000);
     $price = floatval($data['price'] ?? 0);
-    $image = sanitize($data['image'] ?? '');
+    $originalPrice = isset($data['original_price']) ? floatval($data['original_price']) : null;
+    $image = sanitize($data['image'] ?? '', 500);
     $images = json_encode($data['images'] ?? []);
     $tags = json_encode($data['tags'] ?? []);
-    $in_stock = isset($data['in_stock']) ? ($data['in_stock'] ? 1 : 0) : 1;
+    $specifications = json_encode($data['specifications'] ?? []);
+    $features = json_encode($data['features'] ?? []);
+    $badge = sanitize($data['badge'] ?? '', 50);
+    $inStock = isset($data['in_stock']) ? ($data['in_stock'] ? 1 : 0) : 1;
     $featured = isset($data['featured']) ? ($data['featured'] ? 1 : 0) : 0;
     
-    if (empty($name) || empty($category)) {
-        jsonResponse(['error' => 'Name and category are required'], 400);
-    }
-    
     $stmt = $db->prepare("
-        INSERT INTO products (name, description, category, price, image, images, tags, in_stock, featured, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO products (
+            name, slug, category, description, full_description, price, original_price,
+            image, images, tags, specifications, features, badge, in_stock, featured, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
-    $stmt->execute([$name, $description, $category, $price, $image, $images, $tags, $in_stock, $featured]);
+    
+    $stmt->execute([
+        sanitize($name, 255),
+        $slug,
+        sanitize($category, 100),
+        $description,
+        $fullDescription,
+        $price,
+        $originalPrice,
+        $image,
+        $images,
+        $tags,
+        $specifications,
+        $features,
+        $badge,
+        $inStock,
+        $featured
+    ]);
     
     $id = $db->lastInsertId();
     
-    jsonResponse(['id' => $id, 'message' => 'Product created successfully'], 201);
-} elseif ($method === 'PUT') {
-    $data = json_decode(file_get_contents('php://input'), true);
+    jsonResponse([
+        'success' => true,
+        'id' => (int)$id,
+        'slug' => $slug,
+        'message' => 'Product created successfully'
+    ], 201);
+}
+
+/**
+ * Handle PUT requests - Update existing product
+ */
+function handlePut(PDO $db): void {
+    $data = getJsonInput();
+    
+    if (!$data) {
+        jsonResponse(['error' => 'Invalid JSON input'], 400);
+    }
+    
     $id = $data['id'] ?? null;
     
     if (!$id) {
-        jsonResponse(['error' => 'Product ID required'], 400);
+        jsonResponse(['error' => 'Product ID is required'], 400);
     }
     
-    $name = sanitize($data['name'] ?? '');
-    $description = sanitize($data['description'] ?? '');
-    $category = sanitize($data['category'] ?? '');
+    // Check if product exists
+    $stmt = $db->prepare("SELECT id FROM products WHERE id = ?");
+    $stmt->execute([(int)$id]);
+    if (!$stmt->fetch()) {
+        jsonResponse(['error' => 'Product not found'], 404);
+    }
+    
+    // Prepare data
+    $name = sanitize($data['name'] ?? '', 255);
+    $category = sanitize($data['category'] ?? '', 100);
+    $description = sanitize($data['description'] ?? '', 1000);
+    $fullDescription = sanitize($data['full_description'] ?? '', 5000);
     $price = floatval($data['price'] ?? 0);
-    $image = sanitize($data['image'] ?? '');
+    $originalPrice = isset($data['original_price']) ? floatval($data['original_price']) : null;
+    $image = sanitize($data['image'] ?? '', 500);
     $images = json_encode($data['images'] ?? []);
     $tags = json_encode($data['tags'] ?? []);
-    $in_stock = isset($data['in_stock']) ? ($data['in_stock'] ? 1 : 0) : 1;
+    $specifications = json_encode($data['specifications'] ?? []);
+    $features = json_encode($data['features'] ?? []);
+    $badge = sanitize($data['badge'] ?? '', 50);
+    $inStock = isset($data['in_stock']) ? ($data['in_stock'] ? 1 : 0) : 1;
     $featured = isset($data['featured']) ? ($data['featured'] ? 1 : 0) : 0;
     
     $stmt = $db->prepare("
         UPDATE products SET 
-            name = ?, description = ?, category = ?, price = ?, 
-            image = ?, images = ?, tags = ?, in_stock = ?, featured = ?, 
-            updated_at = NOW() 
+            name = ?, category = ?, description = ?, full_description = ?,
+            price = ?, original_price = ?, image = ?, images = ?, tags = ?,
+            specifications = ?, features = ?, badge = ?, in_stock = ?, featured = ?,
+            updated_at = NOW()
         WHERE id = ?
     ");
-    $stmt->execute([$name, $description, $category, $price, $image, $images, $tags, $in_stock, $featured, $id]);
     
-    jsonResponse(['message' => 'Product updated successfully']);
-} elseif ($method === 'DELETE') {
+    $stmt->execute([
+        $name, $category, $description, $fullDescription,
+        $price, $originalPrice, $image, $images, $tags,
+        $specifications, $features, $badge, $inStock, $featured,
+        (int)$id
+    ]);
+    
+    jsonResponse([
+        'success' => true,
+        'message' => 'Product updated successfully'
+    ]);
+}
+
+/**
+ * Handle DELETE requests - Delete product
+ */
+function handleDelete(PDO $db): void {
     $id = $_GET['id'] ?? null;
     
     if (!$id) {
-        jsonResponse(['error' => 'Product ID required'], 400);
+        jsonResponse(['error' => 'Product ID is required'], 400);
     }
     
-    $stmt = $db->prepare("DELETE FROM products WHERE id = ?");
-    $stmt->execute([$id]);
+    // Check if product exists
+    $stmt = $db->prepare("SELECT id, image FROM products WHERE id = ?");
+    $stmt->execute([(int)$id]);
+    $product = $stmt->fetch();
     
-    jsonResponse(['message' => 'Product deleted successfully']);
-} else {
-    jsonResponse(['error' => 'Method not allowed'], 405);
+    if (!$product) {
+        jsonResponse(['error' => 'Product not found'], 404);
+    }
+    
+    // Delete the product
+    $stmt = $db->prepare("DELETE FROM products WHERE id = ?");
+    $stmt->execute([(int)$id]);
+    
+    jsonResponse([
+        'success' => true,
+        'message' => 'Product deleted successfully'
+    ]);
+}
+
+/**
+ * Generate URL-friendly slug from string
+ */
+function generateSlug(string $text): string {
+    $text = strtolower(trim($text));
+    $text = preg_replace('/[^a-z0-9\s-]/', '', $text);
+    $text = preg_replace('/[\s-]+/', '-', $text);
+    return trim($text, '-');
 }
