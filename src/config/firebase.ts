@@ -1,5 +1,5 @@
-// Firebase configuration
-// Add your Firebase config values here
+// Firebase configuration for CoolTech Admin
+// Add your Firebase config values from Firebase Console
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
