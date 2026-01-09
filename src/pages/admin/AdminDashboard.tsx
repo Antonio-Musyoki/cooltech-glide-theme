@@ -3,10 +3,9 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, FileText, Calendar, MessageSquare, TrendingUp, Clock } from 'lucide-react';
-import { adminDashboardApi, DashboardStats, QuoteRecord, BookingRecord } from '@/services/adminService';
+import { dashboardFirebase, DashboardStats, QuoteRecord, BookingRecord } from '@/services/firebaseService';
 import { products } from '@/data/products';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -17,16 +16,16 @@ export default function AdminDashboard() {
   }, []);
 
   const loadStats = async () => {
-    const result = await adminDashboardApi.getStats();
+    const result = await dashboardFirebase.getStats();
     if (result.success && result.data) {
       setStats(result.data);
     } else {
       // Fallback to mock data for demo
       setStats({
         totalProducts: products.length,
-        pendingQuotes: 5,
-        pendingBookings: 3,
-        unreadContacts: 2,
+        pendingQuotes: 0,
+        pendingBookings: 0,
+        unreadContacts: 0,
         recentQuotes: [],
         recentBookings: [],
       });

@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
+import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 import { AdminProtectedRoute } from "@/components/admin/AdminProtectedRoute";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -31,7 +31,7 @@ const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AdminAuthProvider>
+        <FirebaseAuthProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -60,7 +60,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </AdminAuthProvider>
+        </FirebaseAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </HelmetProvider>
