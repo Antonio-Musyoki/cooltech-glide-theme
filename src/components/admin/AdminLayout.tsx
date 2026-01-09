@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
@@ -30,13 +30,13 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, logout } = useAdminAuth();
+  const { user, logout } = useFirebaseAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/admin/login');
   };
 
@@ -99,7 +99,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">{user?.username}</p>
+              <p className="text-sm font-medium">{user?.username || user?.email}</p>
               <p className="text-xs text-muted-foreground">{user?.role}</p>
             </div>
             <Button variant="ghost" size="icon" onClick={handleLogout}>
