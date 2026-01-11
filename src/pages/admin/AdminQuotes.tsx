@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Eye, Trash2, Mail, Phone, Building, Package, Wrench } from 'lucide-react';
-import { adminQuotesApi, QuoteRecord } from '@/services/adminService';
+import { Search, Eye, Trash2, Mail, Phone, Building, Package, Wrench, Loader2 } from 'lucide-react';
+import { quotesFirebase, QuoteRecord } from '@/services/firebaseService';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { products, services } from '@/data/products';
@@ -22,7 +22,7 @@ const statusColors: Record<QuoteRecord['status'], string> = {
 // Mock data for demo
 const mockQuotes: QuoteRecord[] = [
   {
-    id: 1,
+    id: '1',
     name: 'John Mwangi',
     email: 'john@example.com',
     phone: '+254712345678',
@@ -35,7 +35,7 @@ const mockQuotes: QuoteRecord[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 2,
+    id: '2',
     name: 'Sarah Wanjiku',
     email: 'sarah@business.co.ke',
     phone: '+254723456789',
@@ -63,8 +63,8 @@ export default function AdminQuotes() {
 
   const loadQuotes = async () => {
     setIsLoading(true);
-    const result = await adminQuotesApi.getAll();
-    if (result.success && result.data) {
+    const result = await quotesFirebase.getAll();
+    if (result.success && result.data && result.data.length > 0) {
       setQuotes(result.data);
     }
     setIsLoading(false);
@@ -79,8 +79,8 @@ export default function AdminQuotes() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = async (quoteId: number, newStatus: QuoteRecord['status']) => {
-    const result = await adminQuotesApi.updateStatus(quoteId.toString(), newStatus);
+  const handleStatusChange = async (quoteId: string, newStatus: QuoteRecord['status']) => {
+    const result = await quotesFirebase.updateStatus(quoteId, newStatus);
     if (result.success) {
       toast({ title: 'Status updated' });
       loadQuotes();
@@ -91,10 +91,10 @@ export default function AdminQuotes() {
     setSelectedQuote(null);
   };
 
-  const handleDelete = async (quoteId: number) => {
+  const handleDelete = async (quoteId: string) => {
     if (!confirm('Delete this quote request?')) return;
     
-    const result = await adminQuotesApi.delete(quoteId.toString());
+    const result = await quotesFirebase.delete(quoteId);
     if (result.success) {
       toast({ title: 'Quote deleted' });
       loadQuotes();
@@ -111,9 +111,12 @@ export default function AdminQuotes() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Quote Requests</h1>
-          <p className="text-muted-foreground">Manage customer quotation requests</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Quote Requests</h1>
+            <p className="text-muted-foreground">Manage customer quotation requests</p>
+          </div>
+          {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         </div>
 
         {/* Filters */}
@@ -243,7 +246,7 @@ export default function AdminQuotes() {
               </div>
 
               {/* Products/Services */}
-              {selectedQuote.products?.length > 0 && (
+              {selectedQuote.products && selectedQuote.products.length > 0 && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
                     <Package className="h-4 w-4" /> Requested Products
@@ -256,7 +259,7 @@ export default function AdminQuotes() {
                 </div>
               )}
 
-              {selectedQuote.services?.length > 0 && (
+              {selectedQuote.services && selectedQuote.services.length > 0 && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
                     <Wrench className="h-4 w-4" /> Requested Services
