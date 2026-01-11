@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Plus, Pencil, Trash2, Search, Upload, Loader2, X } from 'lucide-react';
 import { products as staticProducts, categories, formatPrice, Product } from '@/data/products';
-import { adminProductsApi, ProductRecord } from '@/services/adminService';
+import { productsFirebase } from '@/services/firebaseService';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
 
@@ -48,15 +48,11 @@ export default function AdminProducts() {
 
   const loadProducts = async () => {
     setIsLoading(true);
-    const result = await adminProductsApi.getAll();
-    if (result.success && result.data) {
-      setProducts(result.data.map(p => ({
-        ...p,
-        isQuoteOnly: p.isQuoteOnly,
-        price: p.price ?? undefined,
-      })));
+    const result = await productsFirebase.getAll();
+    if (result.success && result.data && result.data.length > 0) {
+      setProducts(result.data);
     }
-    // Fallback to static products if API fails
+    // Fallback to static products if Firebase returns empty or fails
     setIsLoading(false);
   };
 
@@ -109,19 +105,18 @@ export default function AdminProducts() {
 
     setIsSaving(true);
 
-    const productData: Partial<ProductRecord> = {
-      id: formData.id || formData.name.toLowerCase().replace(/\s+/g, '-'),
+    const productData: Omit<Product, 'id'> = {
       name: formData.name,
       category: formData.category,
-      price: formData.isQuoteOnly ? null : parseFloat(formData.price) || null,
+      price: formData.isQuoteOnly ? undefined : parseFloat(formData.price) || undefined,
       description: formData.description,
-      image: formData.image,
+      image: formData.image || '/placeholder.svg',
       isQuoteOnly: formData.isQuoteOnly,
       tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
     };
 
     if (editingProduct) {
-      const result = await adminProductsApi.update(editingProduct.id, productData);
+      const result = await productsFirebase.update(editingProduct.id, productData);
       if (result.success) {
         toast({ title: 'Success', description: 'Product updated successfully' });
         loadProducts();
@@ -129,19 +124,20 @@ export default function AdminProducts() {
         // Update local state for demo
         setProducts(prev => prev.map(p => 
           p.id === editingProduct.id 
-            ? { ...productData, price: productData.price ?? undefined } as Product 
+            ? { ...productData, id: editingProduct.id } as Product 
             : p
         ));
         toast({ title: 'Success', description: 'Product updated (demo mode)' });
       }
     } else {
-      const result = await adminProductsApi.create(productData);
-      if (result.success) {
+      const result = await productsFirebase.create(productData);
+      if (result.success && result.data) {
         toast({ title: 'Success', description: 'Product created successfully' });
         loadProducts();
       } else {
         // Add to local state for demo
-        setProducts(prev => [...prev, { ...productData, price: productData.price ?? undefined } as Product]);
+        const newId = formData.name.toLowerCase().replace(/\s+/g, '-');
+        setProducts(prev => [...prev, { ...productData, id: newId } as Product]);
         toast({ title: 'Success', description: 'Product created (demo mode)' });
       }
     }
@@ -153,7 +149,7 @@ export default function AdminProducts() {
   const handleDelete = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
-    const result = await adminProductsApi.delete(productId);
+    const result = await productsFirebase.delete(productId);
     if (result.success) {
       toast({ title: 'Success', description: 'Product deleted' });
       loadProducts();
@@ -172,10 +168,10 @@ export default function AdminProducts() {
     const imageUrl = URL.createObjectURL(file);
     setFormData(prev => ({ ...prev, image: imageUrl }));
 
-    // Try actual upload
-    const result = await adminProductsApi.uploadImage(file);
+    // Try actual upload to Firebase Storage
+    const result = await productsFirebase.uploadImage(file);
     if (result.success && result.data?.url) {
-      setFormData(prev => ({ ...prev, image: result.data.url }));
+      setFormData(prev => ({ ...prev, image: result.data!.url }));
     }
   };
 

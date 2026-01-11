@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Eye, Trash2, Mail, Phone, MapPin, Calendar, Clock } from 'lucide-react';
-import { adminBookingsApi, BookingRecord } from '@/services/adminService';
+import { Search, Eye, Trash2, Mail, Phone, MapPin, Calendar, Clock, Loader2 } from 'lucide-react';
+import { bookingsFirebase, BookingRecord } from '@/services/firebaseService';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { services } from '@/data/products';
@@ -22,7 +22,7 @@ const statusColors: Record<BookingRecord['status'], string> = {
 // Mock data for demo
 const mockBookings: BookingRecord[] = [
   {
-    id: 1,
+    id: '1',
     name: 'Peter Otieno',
     email: 'peter@example.com',
     phone: '+254734567890',
@@ -37,7 +37,7 @@ const mockBookings: BookingRecord[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 2,
+    id: '2',
     name: 'Grace Njeri',
     email: 'grace@home.co.ke',
     phone: '+254745678901',
@@ -67,8 +67,8 @@ export default function AdminBookings() {
 
   const loadBookings = async () => {
     setIsLoading(true);
-    const result = await adminBookingsApi.getAll();
-    if (result.success && result.data) {
+    const result = await bookingsFirebase.getAll();
+    if (result.success && result.data && result.data.length > 0) {
       setBookings(result.data);
     }
     setIsLoading(false);
@@ -83,8 +83,8 @@ export default function AdminBookings() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = async (bookingId: number, newStatus: BookingRecord['status']) => {
-    const result = await adminBookingsApi.updateStatus(bookingId.toString(), newStatus);
+  const handleStatusChange = async (bookingId: string, newStatus: BookingRecord['status']) => {
+    const result = await bookingsFirebase.updateStatus(bookingId, newStatus);
     if (result.success) {
       toast({ title: 'Status updated' });
       loadBookings();
@@ -95,10 +95,10 @@ export default function AdminBookings() {
     setSelectedBooking(null);
   };
 
-  const handleDelete = async (bookingId: number) => {
+  const handleDelete = async (bookingId: string) => {
     if (!confirm('Delete this booking?')) return;
     
-    const result = await adminBookingsApi.delete(bookingId.toString());
+    const result = await bookingsFirebase.delete(bookingId);
     if (result.success) {
       toast({ title: 'Booking deleted' });
       loadBookings();
@@ -114,9 +114,12 @@ export default function AdminBookings() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Bookings</h1>
-          <p className="text-muted-foreground">Manage service appointments</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Bookings</h1>
+            <p className="text-muted-foreground">Manage service appointments</p>
+          </div>
+          {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         </div>
 
         {/* Filters */}

@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Eye, Trash2, Mail, Phone, MessageSquare } from 'lucide-react';
-import { adminContactsApi, ContactRecord } from '@/services/adminService';
+import { Search, Eye, Trash2, Mail, Phone, Loader2 } from 'lucide-react';
+import { contactsFirebase, ContactRecord } from '@/services/firebaseService';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -20,7 +20,7 @@ const statusColors: Record<ContactRecord['status'], string> = {
 // Mock data for demo
 const mockContacts: ContactRecord[] = [
   {
-    id: 1,
+    id: '1',
     name: 'Michael Kamau',
     email: 'michael@gmail.com',
     phone: '+254756789012',
@@ -30,7 +30,7 @@ const mockContacts: ContactRecord[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 2,
+    id: '2',
     name: 'Jane Achieng',
     email: 'jane@company.co.ke',
     phone: '+254767890123',
@@ -55,8 +55,8 @@ export default function AdminContacts() {
 
   const loadContacts = async () => {
     setIsLoading(true);
-    const result = await adminContactsApi.getAll();
-    if (result.success && result.data) {
+    const result = await contactsFirebase.getAll();
+    if (result.success && result.data && result.data.length > 0) {
       setContacts(result.data);
     }
     setIsLoading(false);
@@ -71,8 +71,8 @@ export default function AdminContacts() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = async (contactId: number, newStatus: ContactRecord['status']) => {
-    const result = await adminContactsApi.updateStatus(contactId.toString(), newStatus);
+  const handleStatusChange = async (contactId: string, newStatus: ContactRecord['status']) => {
+    const result = await contactsFirebase.updateStatus(contactId, newStatus);
     if (result.success) {
       toast({ title: 'Status updated' });
       loadContacts();
@@ -82,10 +82,10 @@ export default function AdminContacts() {
     }
   };
 
-  const handleDelete = async (contactId: number) => {
+  const handleDelete = async (contactId: string) => {
     if (!confirm('Delete this message?')) return;
     
-    const result = await adminContactsApi.delete(contactId.toString());
+    const result = await contactsFirebase.delete(contactId);
     if (result.success) {
       toast({ title: 'Message deleted' });
       loadContacts();
@@ -106,9 +106,12 @@ export default function AdminContacts() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Contact Messages</h1>
-          <p className="text-muted-foreground">Manage customer inquiries</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Contact Messages</h1>
+            <p className="text-muted-foreground">Manage customer inquiries</p>
+          </div>
+          {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         </div>
 
         {/* Filters */}
