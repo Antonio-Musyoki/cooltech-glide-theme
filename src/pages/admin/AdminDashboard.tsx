@@ -3,7 +3,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, FileText, Calendar, MessageSquare, TrendingUp, Clock } from 'lucide-react';
-import { dashboardFirebase, DashboardStats, QuoteRecord, BookingRecord } from '@/services/firebaseService';
+import { dashboardApi, DashboardStats, QuoteRecord, BookingRecord } from '@/services/supabaseService';
 import { products } from '@/data/products';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -16,7 +16,7 @@ export default function AdminDashboard() {
   }, []);
 
   const loadStats = async () => {
-    const result = await dashboardFirebase.getStats();
+    const result = await dashboardApi.getStats();
     if (result.success && result.data) {
       setStats(result.data);
     } else {
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
                         <p className="font-medium text-sm">{booking.name}</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {booking.preferredDate} at {booking.preferredTime}
+                          {booking.preferred_date} at {booking.preferred_time}
                         </p>
                       </div>
                       <Badge variant={booking.status === 'pending' ? 'secondary' : 'default'}>
