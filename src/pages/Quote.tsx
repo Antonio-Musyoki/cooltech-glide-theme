@@ -9,8 +9,8 @@ import { FileText, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { quotesApi, QuoteRequest } from "@/services/apiService";
-import { useApiMutation } from "@/hooks/useApi";
+import { quotesApi, QuoteRequest } from "@/services/supabaseService";
+import { useToast } from "@/hooks/use-toast";
 
 const Quote = () => {
   const [searchParams] = useSearchParams();
@@ -21,50 +21,49 @@ const Quote = () => {
     email: "",
     phone: "",
     company: "",
-    requestType: "" as "product" | "service" | "both" | "",
-    product: preselectedProduct,
-    service: "",
-    quantity: "",
+    service_type: "",
     details: "",
   });
-
-  const { mutate, isLoading } = useApiMutation<QuoteRequest, { id: string }>(
-    quotesApi.submit,
-    {
-      successMessage: "Quotation request submitted! We'll get back to you within 24 hours.",
-      errorMessage: "Failed to submit quote request. Please try again or contact us directly.",
-    }
-  );
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     const payload: QuoteRequest = {
       name: formData.name,
       email: formData.email,
-      phone: formData.phone,
+      phone: formData.phone || undefined,
       company: formData.company || undefined,
-      requestType: formData.requestType as "product" | "service" | "both",
-      products: formData.product ? [formData.product] : undefined,
-      services: formData.service ? [formData.service] : undefined,
-      message: `Quantity: ${formData.quantity || "Not specified"}\n\n${formData.details}`,
+      service_type: formData.service_type || undefined,
+      message: formData.details || undefined,
     };
 
-    const result = await mutate(payload);
+    const result = await quotesApi.submit(payload);
     
     if (result.success) {
+      toast({
+        title: "Quote Request Submitted!",
+        description: "We'll get back to you within 24 hours.",
+      });
       setFormData({
         name: "",
         email: "",
         phone: "",
         company: "",
-        requestType: "",
-        product: "",
-        service: "",
-        quantity: "",
+        service_type: "",
         details: "",
       });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to submit quote request. Please try again or contact us directly.",
+        variant: "destructive",
+      });
     }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -126,10 +125,9 @@ const Quote = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Phone Number *</label>
+                      <label className="text-sm font-medium">Phone Number</label>
                       <Input
                         type="tel"
-                        required
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="+254 7XX XXX XXX"
@@ -147,83 +145,26 @@ const Quote = () => {
                     </div>
                   </div>
 
-                  {/* Request Type */}
+                  {/* Service Type */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Request Type *</label>
+                    <label className="text-sm font-medium">Service Type</label>
                     <Select
-                      value={formData.requestType}
-                      onValueChange={(value) => setFormData({ ...formData, requestType: value as any })}
+                      value={formData.service_type}
+                      onValueChange={(value) => setFormData({ ...formData, service_type: value })}
                       disabled={isLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select request type" />
+                        <SelectValue placeholder="Select service type" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="product">Product Quote</SelectItem>
                         <SelectItem value="service">Service Quote</SelectItem>
-                        <SelectItem value="both">Both Product & Service</SelectItem>
+                        <SelectItem value="installation">Installation</SelectItem>
+                        <SelectItem value="maintenance">Maintenance Contract</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Product Selection */}
-                  {(formData.requestType === "product" || formData.requestType === "both") && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Product</label>
-                        <Select
-                          value={formData.product}
-                          onValueChange={(value) => setFormData({ ...formData, product: value })}
-                          disabled={isLoading}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Quantity</label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={formData.quantity}
-                          onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                          placeholder="1"
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Service Selection */}
-                  {(formData.requestType === "service" || formData.requestType === "both") && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Service</label>
-                      <Select
-                        value={formData.service}
-                        onValueChange={(value) => setFormData({ ...formData, service: value })}
-                        disabled={isLoading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {services.map((service) => (
-                            <SelectItem key={service.id} value={service.id}>
-                              {service.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
 
                   {/* Additional Details */}
                   <div className="space-y-2">

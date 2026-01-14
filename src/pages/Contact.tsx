@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, Mail, MapPin, Clock, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { contactApi, ContactRequest } from "@/services/apiService";
-import { useApiMutation } from "@/hooks/useApi";
+import { contactsApi, ContactRequest } from "@/services/supabaseService";
+import { useToast } from "@/hooks/use-toast";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -17,29 +17,28 @@ const Contact = () => {
     subject: "",
     message: "",
   });
-
-  const { mutate, isLoading } = useApiMutation<ContactRequest, { id: string }>(
-    contactApi.submit,
-    {
-      successMessage: "Message sent! We'll respond within 24 hours.",
-      errorMessage: "Failed to send message. Please try again or contact us directly.",
-    }
-  );
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     const payload: ContactRequest = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone || undefined,
-      subject: formData.subject,
+      subject: formData.subject || undefined,
       message: formData.message,
     };
 
-    const result = await mutate(payload);
+    const result = await contactsApi.submit(payload);
     
     if (result.success) {
+      toast({
+        title: "Message Sent!",
+        description: "We'll respond within 24 hours.",
+      });
       setFormData({
         name: "",
         email: "",
@@ -47,7 +46,15 @@ const Contact = () => {
         subject: "",
         message: "",
       });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again or contact us directly.",
+        variant: "destructive",
+      });
     }
+    
+    setIsLoading(false);
   };
 
   const contactInfo = [

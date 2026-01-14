@@ -8,8 +8,8 @@ import { services } from "@/data/products";
 import { Calendar, Clock, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { bookingsApi, BookingRequest } from "@/services/apiService";
-import { useApiMutation } from "@/hooks/useApi";
+import { bookingsApi, BookingRequest } from "@/services/supabaseService";
+import { useToast } from "@/hooks/use-toast";
 
 const timeSlots = [
   "09:00 AM",
@@ -27,55 +27,56 @@ const Booking = () => {
     name: "",
     email: "",
     phone: "",
-    company: "",
-    serviceLocation: "" as "residential" | "commercial" | "industrial" | "",
     address: "",
     service: "",
     date: "",
     time: "",
     notes: "",
   });
-
-  const { mutate, isLoading } = useApiMutation<BookingRequest, { id: string }>(
-    bookingsApi.submit,
-    {
-      successMessage: "Appointment booked! We'll contact you to confirm within 2 hours.",
-      errorMessage: "Failed to book appointment. Please try again or call us directly.",
-    }
-  );
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
     const payload: BookingRequest = {
       name: formData.name,
       email: formData.email,
-      phone: formData.phone,
-      company: formData.company || undefined,
-      serviceLocation: formData.serviceLocation as "residential" | "commercial" | "industrial",
-      address: formData.address,
-      service: formData.service,
-      preferredDate: formData.date,
-      preferredTime: formData.time,
-      description: formData.notes,
+      phone: formData.phone || undefined,
+      address: formData.address || undefined,
+      service_type: formData.service || undefined,
+      preferred_date: formData.date || undefined,
+      preferred_time: formData.time || undefined,
+      message: formData.notes || undefined,
     };
 
-    const result = await mutate(payload);
+    const result = await bookingsApi.submit(payload);
     
     if (result.success) {
+      toast({
+        title: "Appointment Booked!",
+        description: "We'll contact you to confirm within 2 hours.",
+      });
       setFormData({
         name: "",
         email: "",
         phone: "",
-        company: "",
-        serviceLocation: "",
         address: "",
         service: "",
         date: "",
         time: "",
         notes: "",
       });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to book appointment. Please try again or call us directly.",
+        variant: "destructive",
+      });
     }
+    
+    setIsLoading(false);
   };
 
   // Get minimum date (tomorrow)
@@ -145,10 +146,9 @@ const Booking = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Phone Number *</label>
+                      <label className="text-sm font-medium">Phone Number</label>
                       <Input
                         type="tel"
-                        required
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="+254 7XX XXX XXX"
@@ -156,39 +156,8 @@ const Booking = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Company Name</label>
+                      <label className="text-sm font-medium">Service Address</label>
                       <Input
-                        value={formData.company}
-                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                        placeholder="Your Company (optional)"
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Location Type */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Location Type *</label>
-                      <Select
-                        value={formData.serviceLocation}
-                        onValueChange={(value) => setFormData({ ...formData, serviceLocation: value as any })}
-                        disabled={isLoading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select location type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="residential">Residential</SelectItem>
-                          <SelectItem value="commercial">Commercial</SelectItem>
-                          <SelectItem value="industrial">Industrial</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Service Address *</label>
-                      <Input
-                        required
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Your address in Nairobi"
@@ -199,7 +168,7 @@ const Booking = () => {
 
                   {/* Service Selection */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Select Service *</label>
+                    <label className="text-sm font-medium">Select Service</label>
                     <Select
                       value={formData.service}
                       onValueChange={(value) => setFormData({ ...formData, service: value })}
@@ -224,11 +193,10 @@ const Booking = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        Preferred Date *
+                        Preferred Date
                       </label>
                       <Input
                         type="date"
-                        required
                         min={minDate}
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -238,7 +206,7 @@ const Booking = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        Preferred Time *
+                        Preferred Time
                       </label>
                       <Select
                         value={formData.time}
