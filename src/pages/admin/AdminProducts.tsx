@@ -9,13 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Pencil, Trash2, Search, Upload, Loader2, X } from 'lucide-react';
-import { products as staticProducts, categories, formatPrice, Product } from '@/data/products';
-import { productsFirebase } from '@/services/firebaseService';
+import { categories, formatPrice } from '@/data/products';
+import { productsApi, Product } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState<Product[]>(staticProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -26,14 +26,13 @@ export default function AdminProducts() {
   const [searchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
-    id: '',
     name: '',
     category: '',
     price: '',
     description: '',
-    image: '',
-    isQuoteOnly: false,
-    tags: '',
+    image_url: '',
+    in_stock: true,
+    featured: false,
   });
 
   useEffect(() => {
@@ -48,17 +47,16 @@ export default function AdminProducts() {
 
   const loadProducts = async () => {
     setIsLoading(true);
-    const result = await productsFirebase.getAll();
-    if (result.success && result.data && result.data.length > 0) {
+    const result = await productsApi.getAll();
+    if (result.success && result.data) {
       setProducts(result.data);
     }
-    // Fallback to static products if Firebase returns empty or fails
     setIsLoading(false);
   };
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -66,14 +64,13 @@ export default function AdminProducts() {
   const openNewProductDialog = () => {
     setEditingProduct(null);
     setFormData({
-      id: '',
       name: '',
       category: '',
       price: '',
       description: '',
-      image: '',
-      isQuoteOnly: false,
-      tags: '',
+      image_url: '',
+      in_stock: true,
+      featured: false,
     });
     setIsDialogOpen(true);
   };
@@ -81,20 +78,19 @@ export default function AdminProducts() {
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
     setFormData({
-      id: product.id,
       name: product.name,
-      category: product.category,
+      category: product.category || '',
       price: product.price?.toString() || '',
-      description: product.description,
-      image: product.image,
-      isQuoteOnly: product.isQuoteOnly || false,
-      tags: product.tags.join(', '),
+      description: product.description || '',
+      image_url: product.image_url || '',
+      in_stock: product.in_stock ?? true,
+      featured: product.featured ?? false,
     });
     setIsDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.category || !formData.description) {
+    if (!formData.name || !formData.category) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -105,40 +101,31 @@ export default function AdminProducts() {
 
     setIsSaving(true);
 
-    const productData: Omit<Product, 'id'> = {
+    const productData: Partial<Product> = {
       name: formData.name,
       category: formData.category,
-      price: formData.isQuoteOnly ? undefined : parseFloat(formData.price) || undefined,
-      description: formData.description,
-      image: formData.image || '/placeholder.svg',
-      isQuoteOnly: formData.isQuoteOnly,
-      tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+      price: parseFloat(formData.price) || 0,
+      description: formData.description || null,
+      image_url: formData.image_url || null,
+      in_stock: formData.in_stock,
+      featured: formData.featured,
     };
 
     if (editingProduct) {
-      const result = await productsFirebase.update(editingProduct.id, productData);
+      const result = await productsApi.update(editingProduct.id, productData);
       if (result.success) {
         toast({ title: 'Success', description: 'Product updated successfully' });
         loadProducts();
       } else {
-        // Update local state for demo
-        setProducts(prev => prev.map(p => 
-          p.id === editingProduct.id 
-            ? { ...productData, id: editingProduct.id } as Product 
-            : p
-        ));
-        toast({ title: 'Success', description: 'Product updated (demo mode)' });
+        toast({ title: 'Error', description: 'Failed to update product', variant: 'destructive' });
       }
     } else {
-      const result = await productsFirebase.create(productData);
-      if (result.success && result.data) {
+      const result = await productsApi.create(productData);
+      if (result.success) {
         toast({ title: 'Success', description: 'Product created successfully' });
         loadProducts();
       } else {
-        // Add to local state for demo
-        const newId = formData.name.toLowerCase().replace(/\s+/g, '-');
-        setProducts(prev => [...prev, { ...productData, id: newId } as Product]);
-        toast({ title: 'Success', description: 'Product created (demo mode)' });
+        toast({ title: 'Error', description: 'Failed to create product', variant: 'destructive' });
       }
     }
 
@@ -149,14 +136,12 @@ export default function AdminProducts() {
   const handleDelete = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
-    const result = await productsFirebase.delete(productId);
+    const result = await productsApi.delete(productId);
     if (result.success) {
       toast({ title: 'Success', description: 'Product deleted' });
       loadProducts();
     } else {
-      // Remove from local state for demo
-      setProducts(prev => prev.filter(p => p.id !== productId));
-      toast({ title: 'Success', description: 'Product deleted (demo mode)' });
+      toast({ title: 'Error', description: 'Failed to delete product', variant: 'destructive' });
     }
   };
 
@@ -164,14 +149,12 @@ export default function AdminProducts() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // For demo, create object URL
-    const imageUrl = URL.createObjectURL(file);
-    setFormData(prev => ({ ...prev, image: imageUrl }));
-
-    // Try actual upload to Firebase Storage
-    const result = await productsFirebase.uploadImage(file);
+    const result = await productsApi.uploadImage(file);
     if (result.success && result.data?.url) {
-      setFormData(prev => ({ ...prev, image: result.data!.url }));
+      setFormData(prev => ({ ...prev, image_url: result.data!.url }));
+      toast({ title: 'Image uploaded' });
+    } else {
+      toast({ title: 'Failed to upload image', variant: 'destructive' });
     }
   };
 
@@ -218,50 +201,62 @@ export default function AdminProducts() {
           </CardContent>
         </Card>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
-              <div className="aspect-video relative bg-muted">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="object-cover w-full h-full"
-                />
-                {product.isQuoteOnly && (
-                  <Badge className="absolute top-2 right-2">Quote Only</Badge>
-                )}
-              </div>
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
-                <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
-                <p className="text-lg font-bold text-primary mb-3">
-                  {product.price ? formatPrice(product.price) : 'Request Quote'}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => openEditDialog(product)}
-                  >
-                    <Pencil className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(product.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
-        {filteredProducts.length === 0 && (
+        {/* Products Grid */}
+        {!isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} className="overflow-hidden">
+                <div className="aspect-video relative bg-muted">
+                  <img
+                    src={product.image_url || '/placeholder.svg'}
+                    alt={product.name}
+                    className="object-cover w-full h-full"
+                  />
+                  {product.featured && (
+                    <Badge className="absolute top-2 right-2">Featured</Badge>
+                  )}
+                  {!product.in_stock && (
+                    <Badge variant="destructive" className="absolute top-2 left-2">Out of Stock</Badge>
+                  )}
+                </div>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
+                  <p className="text-lg font-bold text-primary mb-3">
+                    {product.price ? formatPrice(product.price) : 'Request Quote'}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => openEditDialog(product)}
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(product.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && filteredProducts.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No products found</p>
@@ -284,15 +279,15 @@ export default function AdminProducts() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Product Image</label>
               <div className="flex items-center gap-4">
-                {formData.image ? (
+                {formData.image_url ? (
                   <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted">
                     <img
-                      src={formData.image}
+                      src={formData.image_url}
                       alt="Product"
                       className="object-cover w-full h-full"
                     />
                     <button
-                      onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
+                      onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
                       className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"
                     >
                       <X className="h-3 w-3" />
@@ -313,8 +308,8 @@ export default function AdminProducts() {
                 <div className="flex-1">
                   <Input
                     placeholder="Or paste image URL..."
-                    value={formData.image}
-                    onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                    value={formData.image_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
                   />
                 </div>
               </div>
@@ -348,51 +343,44 @@ export default function AdminProducts() {
               </Select>
             </div>
 
-            {/* Quote Only Toggle */}
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div>
-                <p className="font-medium">Quote Only</p>
-                <p className="text-sm text-muted-foreground">Product requires a quote instead of fixed price</p>
-              </div>
-              <Switch
-                checked={formData.isQuoteOnly}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isQuoteOnly: checked }))}
+            {/* Price */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Price (KES)</label>
+              <Input
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                placeholder="e.g. 285000"
               />
             </div>
 
-            {/* Price */}
-            {!formData.isQuoteOnly && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Price (KES)</label>
-                <Input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  placeholder="e.g. 285000"
+            {/* Toggles */}
+            <div className="flex gap-6">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.in_stock}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, in_stock: checked }))}
                 />
+                <label className="text-sm font-medium">In Stock</label>
               </div>
-            )}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.featured}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
+                />
+                <label className="text-sm font-medium">Featured</label>
+              </div>
+            </div>
 
             {/* Description */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description *</label>
+              <label className="text-sm font-medium">Description</label>
               <Textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Product description..."
                 rows={4}
               />
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">SEO Tags</label>
-              <Input
-                value={formData.tags}
-                onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                placeholder="e.g. Ice Makers Kenya, Cold Storage"
-              />
-              <p className="text-xs text-muted-foreground">Comma-separated tags for SEO</p>
             </div>
           </div>
 

@@ -7,42 +7,20 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Eye, Trash2, Mail, Phone, Loader2 } from 'lucide-react';
-import { contactsFirebase, ContactRecord } from '@/services/firebaseService';
+import { contactsApi, ContactRecord } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
-const statusColors: Record<ContactRecord['status'], string> = {
+type ContactStatus = 'unread' | 'read' | 'replied';
+
+const statusColors: Record<ContactStatus, string> = {
   unread: 'bg-red-100 text-red-800',
   read: 'bg-blue-100 text-blue-800',
   replied: 'bg-green-100 text-green-800',
 };
 
-// Mock data for demo
-const mockContacts: ContactRecord[] = [
-  {
-    id: '1',
-    name: 'Michael Kamau',
-    email: 'michael@gmail.com',
-    phone: '+254756789012',
-    subject: 'Product Inquiry',
-    message: 'Hi, I would like to know more about your ice cream trolleys. Do you have different sizes available?',
-    status: 'unread',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'Jane Achieng',
-    email: 'jane@company.co.ke',
-    phone: '+254767890123',
-    subject: 'Service Availability',
-    message: 'Do you offer services in Mombasa? We have a cold room that needs maintenance.',
-    status: 'read',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-  },
-];
-
 export default function AdminContacts() {
-  const [contacts, setContacts] = useState<ContactRecord[]>(mockContacts);
+  const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
@@ -55,8 +33,8 @@ export default function AdminContacts() {
 
   const loadContacts = async () => {
     setIsLoading(true);
-    const result = await contactsFirebase.getAll();
-    if (result.success && result.data && result.data.length > 0) {
+    const result = await contactsApi.getAll();
+    if (result.success && result.data) {
       setContacts(result.data);
     }
     setIsLoading(false);
@@ -66,32 +44,30 @@ export default function AdminContacts() {
     const matchesSearch = 
       contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.subject.toLowerCase().includes(searchQuery.toLowerCase());
+      (contact.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const handleStatusChange = async (contactId: string, newStatus: ContactRecord['status']) => {
-    const result = await contactsFirebase.updateStatus(contactId, newStatus);
+  const handleStatusChange = async (contactId: string, newStatus: string) => {
+    const result = await contactsApi.updateStatus(contactId, newStatus);
     if (result.success) {
       toast({ title: 'Status updated' });
       loadContacts();
     } else {
-      setContacts(prev => prev.map(c => c.id === contactId ? { ...c, status: newStatus } : c));
-      toast({ title: 'Status updated (demo mode)' });
+      toast({ title: 'Failed to update status', variant: 'destructive' });
     }
   };
 
   const handleDelete = async (contactId: string) => {
     if (!confirm('Delete this message?')) return;
     
-    const result = await contactsFirebase.delete(contactId);
+    const result = await contactsApi.delete(contactId);
     if (result.success) {
       toast({ title: 'Message deleted' });
       loadContacts();
     } else {
-      setContacts(prev => prev.filter(c => c.id !== contactId));
-      toast({ title: 'Message deleted (demo mode)' });
+      toast({ title: 'Failed to delete message', variant: 'destructive' });
     }
   };
 
@@ -154,9 +130,11 @@ export default function AdminContacts() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold text-foreground">{contact.name}</h3>
-                      <Badge className={statusColors[contact.status]}>{contact.status}</Badge>
+                      <Badge className={statusColors[contact.status as ContactStatus] || 'bg-gray-100 text-gray-800'}>
+                        {contact.status}
+                      </Badge>
                     </div>
-                    <p className="font-medium text-foreground">{contact.subject}</p>
+                    <p className="font-medium text-foreground">{contact.subject || 'No subject'}</p>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Mail className="h-3.5 w-3.5" />
@@ -222,7 +200,7 @@ export default function AdminContacts() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium">{format(new Date(selectedContact.createdAt), 'PPp')}</p>
+                  <p className="font-medium">{format(new Date(selectedContact.created_at), 'PPp')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
@@ -245,7 +223,7 @@ export default function AdminContacts() {
               {/* Subject */}
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Subject</p>
-                <p className="font-semibold text-lg">{selectedContact.subject}</p>
+                <p className="font-semibold text-lg">{selectedContact.subject || 'No subject'}</p>
               </div>
 
               {/* Message */}
@@ -261,7 +239,7 @@ export default function AdminContacts() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => window.location.href = `mailto:${selectedContact.email}?subject=Re: ${selectedContact.subject}`}
+                    onClick={() => window.location.href = `mailto:${selectedContact.email}?subject=Re: ${selectedContact.subject || ''}`}
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Reply via Email
@@ -277,10 +255,10 @@ export default function AdminContacts() {
                   )}
                 </div>
                 <Select
-                  value={selectedContact.status}
+                  value={selectedContact.status || 'unread'}
                   onValueChange={(value) => {
-                    handleStatusChange(selectedContact.id, value as ContactRecord['status']);
-                    setSelectedContact(prev => prev ? { ...prev, status: value as ContactRecord['status'] } : null);
+                    handleStatusChange(selectedContact.id, value);
+                    setSelectedContact(prev => prev ? { ...prev, status: value } : null);
                   }}
                 >
                   <SelectTrigger className="w-32">
