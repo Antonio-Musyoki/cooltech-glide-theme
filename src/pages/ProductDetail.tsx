@@ -2,28 +2,64 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getProductById, getRelatedProducts, formatPrice, Product } from "@/data/products";
+import { formatPrice } from "@/data/products";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { 
   ChevronLeft, 
   ChevronRight, 
-  ShoppingCart, 
   FileText, 
   Check, 
   ArrowLeft,
   Truck,
   Shield,
-  Phone
+  Phone,
+  Loader2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { productsApi, Product } from "@/services/supabaseService";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const product = id ? getProductById(id) : undefined;
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!id) return;
+      setLoading(true);
+      
+      const response = await productsApi.getById(id);
+      if (response.data) {
+        setProduct(response.data);
+        
+        // Load related products
+        const allProducts = await productsApi.getAll();
+        if (allProducts.data) {
+          const related = allProducts.data
+            .filter(p => p.id !== id && p.category === response.data?.category)
+            .slice(0, 4);
+          setRelatedProducts(related.length > 0 ? related : allProducts.data.filter(p => p.id !== id).slice(0, 4));
+        }
+      }
+      setLoading(false);
+    };
+    loadProduct();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container py-20 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-3 text-muted-foreground">Loading product...</span>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!product) {
     return (
@@ -39,8 +75,8 @@ const ProductDetail = () => {
     );
   }
 
-  const relatedProducts = getRelatedProducts(product);
-  const images = product.images?.length ? product.images : [product.image];
+  const images = product.image_url ? [product.image_url] : ["/placeholder.svg"];
+  const specifications = product.specifications as Array<{ label: string; value: string }> | null;
 
   const nextImage = () => {
     setSelectedImageIndex((prev) => (prev + 1) % images.length);
@@ -56,7 +92,7 @@ const ProductDetail = () => {
         <title>{product.name} | CoolTech Kenya</title>
         <meta
           name="description"
-          content={product.fullDescription || product.description}
+          content={product.description || "Quality refrigeration product from CoolTech Kenya"}
         />
       </Helmet>
       <Layout>
@@ -71,13 +107,17 @@ const ProductDetail = () => {
               <Link to="/shop" className="text-muted-foreground hover:text-foreground transition-colors">
                 Shop
               </Link>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              <Link 
-                to={`/shop?category=${product.category.toLowerCase().replace(/ /g, "-")}`} 
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {product.category}
-              </Link>
+              {product.category && (
+                <>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <Link 
+                    to={`/shop?category=${product.category.toLowerCase().replace(/ /g, "-")}`} 
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {product.category}
+                  </Link>
+                </>
+              )}
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
               <span className="text-foreground font-medium truncate max-w-[200px]">{product.name}</span>
             </div>
@@ -159,45 +199,34 @@ const ProductDetail = () => {
               {/* Product Info */}
               <div className="space-y-6">
                 <div>
-                  <Badge variant="secondary" className="mb-3">
-                    {product.category}
-                  </Badge>
+                  {product.category && (
+                    <Badge variant="secondary" className="mb-3">
+                      {product.category}
+                    </Badge>
+                  )}
                   <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
                     {product.name}
                   </h1>
                   
-                  {product.isQuoteOnly ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-primary">Contact for Price</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-3xl font-bold text-primary">
-                        {formatPrice(product.price!)}
-                      </span>
-                      <span className="text-muted-foreground">VAT Inclusive</span>
-                    </div>
-                  )}
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-bold text-primary">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="text-muted-foreground">VAT Inclusive</span>
+                  </div>
                 </div>
 
                 <p className="text-muted-foreground text-lg leading-relaxed">
-                  {product.fullDescription || product.description}
+                  {product.description}
                 </p>
 
-                {/* Features */}
-                {product.features && product.features.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-foreground">Key Features</h3>
-                    <ul className="grid gap-2">
-                      {product.features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                {/* Stock Status */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${product.in_stock ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className={product.in_stock ? 'text-green-600' : 'text-red-600'}>
+                    {product.in_stock ? 'In Stock' : 'Out of Stock'}
+                  </span>
+                </div>
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
@@ -236,18 +265,18 @@ const ProductDetail = () => {
         </section>
 
         {/* Specifications */}
-        {product.specifications && product.specifications.length > 0 && (
+        {specifications && specifications.length > 0 && (
           <section className="py-8 md:py-12 bg-secondary/30">
             <div className="container">
               <h2 className="text-2xl font-bold text-foreground mb-6">Specifications</h2>
               <div className="bg-card rounded-xl border border-border overflow-hidden">
                 <div className="grid md:grid-cols-2">
-                  {product.specifications.map((spec, index) => (
+                  {specifications.map((spec, index) => (
                     <div
                       key={index}
                       className={`flex justify-between px-6 py-4 ${
                         index % 2 === 0 ? "bg-card" : "bg-secondary/20"
-                      } ${index < product.specifications!.length - 2 ? "border-b border-border" : ""}`}
+                      } ${index < specifications.length - 2 ? "border-b border-border" : ""}`}
                     >
                       <span className="font-medium text-foreground">{spec.label}</span>
                       <span className="text-muted-foreground">{spec.value}</span>
@@ -278,7 +307,7 @@ const ProductDetail = () => {
                   <Card key={relatedProduct.id} variant="product" className="group overflow-hidden">
                     <div className="relative aspect-[4/3] overflow-hidden">
                       <img
-                        src={relatedProduct.image}
+                        src={relatedProduct.image_url || "/placeholder.svg"}
                         alt={relatedProduct.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
@@ -291,13 +320,9 @@ const ProductDetail = () => {
                       <CardTitle className="text-lg line-clamp-2">{relatedProduct.name}</CardTitle>
                     </CardHeader>
                     <CardContent className="pb-3">
-                      {relatedProduct.isQuoteOnly ? (
-                        <span className="text-primary font-semibold">Request Quote</span>
-                      ) : (
-                        <span className="text-xl font-bold text-foreground">
-                          {formatPrice(relatedProduct.price!)}
-                        </span>
-                      )}
+                      <span className="text-xl font-bold text-foreground">
+                        {formatPrice(relatedProduct.price)}
+                      </span>
                     </CardContent>
                     <CardFooter>
                       <Link to={`/product/${relatedProduct.id}`} className="w-full">

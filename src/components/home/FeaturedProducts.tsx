@@ -1,11 +1,42 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { products, formatPrice } from "@/data/products";
-import { ArrowRight, Eye, ShoppingCart } from "lucide-react";
+import { formatPrice } from "@/data/products";
+import { ArrowRight, Eye, ShoppingCart, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { productsApi, Product } from "@/services/supabaseService";
 
 export const FeaturedProducts = () => {
-  const featuredProducts = products.slice(0, 4);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      const response = await productsApi.getAll();
+      if (response.data) {
+        // Get featured products or first 4
+        const featured = response.data.filter(p => p.featured).slice(0, 4);
+        setFeaturedProducts(featured.length > 0 ? featured : response.data.slice(0, 4));
+      }
+      setLoading(false);
+    };
+    loadProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-16 md:py-24 bg-background">
+        <div className="container flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </section>
+    );
+  }
+
+  if (featuredProducts.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-16 md:py-24 bg-background">
@@ -33,7 +64,7 @@ export const FeaturedProducts = () => {
               {/* Product Image */}
               <div className="relative aspect-[4/3] overflow-hidden">
                 <img
-                  src={product.image}
+                  src={product.image_url || "/placeholder.svg"}
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
@@ -54,11 +85,7 @@ export const FeaturedProducts = () => {
 
               <CardFooter className="flex flex-col gap-3">
                 <div className="w-full flex items-center justify-between">
-                  {product.isQuoteOnly ? (
-                    <span className="text-primary font-semibold">Request Quote</span>
-                  ) : (
-                    <span className="text-xl font-bold text-foreground">{formatPrice(product.price!)}</span>
-                  )}
+                  <span className="text-xl font-bold text-foreground">{formatPrice(product.price)}</span>
                 </div>
                 <div className="w-full flex gap-2">
                   <Link to={`/product/${product.id}`} className="flex-1">
@@ -68,7 +95,7 @@ export const FeaturedProducts = () => {
                   </Link>
                   <Button variant="default" size="sm" className="flex-1">
                     <ShoppingCart className="h-4 w-4 mr-1" />
-                    {product.isQuoteOnly ? "Quote" : "Add"}
+                    Quote
                   </Button>
                 </div>
               </CardFooter>
