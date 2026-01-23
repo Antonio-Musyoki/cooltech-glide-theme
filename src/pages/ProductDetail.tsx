@@ -75,8 +75,13 @@ const ProductDetail = () => {
     );
   }
 
-  const images = product.image_url ? [product.image_url] : ["/placeholder.svg"];
+  const images = product.images && product.images.length > 0 
+    ? [product.image_url, ...product.images].filter(Boolean) as string[]
+    : product.image_url 
+      ? [product.image_url] 
+      : ["/placeholder.svg"];
   const specifications = product.specifications as Array<{ label: string; value: string }> | null;
+  const features = product.features || [];
 
   const nextImage = () => {
     setSelectedImageIndex((prev) => (prev + 1) % images.length);
@@ -217,8 +222,23 @@ const ProductDetail = () => {
                 </div>
 
                 <p className="text-muted-foreground text-lg leading-relaxed">
-                  {product.description}
+                  {product.full_description || product.description}
                 </p>
+
+                {/* Features */}
+                {features.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-foreground">Key Features</h3>
+                    <ul className="grid gap-2">
+                      {features.map((feature, index) => (
+                        <li key={index} className="flex items-start gap-3">
+                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span className="text-muted-foreground">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Stock Status */}
                 <div className="flex items-center gap-2">

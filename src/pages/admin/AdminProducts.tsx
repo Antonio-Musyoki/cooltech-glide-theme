@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Pencil, Trash2, Search, Upload, Loader2, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Pencil, Trash2, Search, Upload, Loader2, X, Image as ImageIcon } from 'lucide-react';
 import { categories, formatPrice } from '@/data/products';
 import { productsApi, Product } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
@@ -30,10 +31,16 @@ export default function AdminProducts() {
     category: '',
     price: '',
     description: '',
+    full_description: '',
     image_url: '',
+    images: [] as string[],
+    features: [] as string[],
     in_stock: true,
     featured: false,
   });
+
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newFeature, setNewFeature] = useState('');
 
   useEffect(() => {
     if (searchParams.get('action') === 'new') {
@@ -68,10 +75,15 @@ export default function AdminProducts() {
       category: '',
       price: '',
       description: '',
+      full_description: '',
       image_url: '',
+      images: [],
+      features: [],
       in_stock: true,
       featured: false,
     });
+    setNewImageUrl('');
+    setNewFeature('');
     setIsDialogOpen(true);
   };
 
@@ -82,10 +94,15 @@ export default function AdminProducts() {
       category: product.category || '',
       price: product.price?.toString() || '',
       description: product.description || '',
+      full_description: product.full_description || '',
       image_url: product.image_url || '',
+      images: product.images || [],
+      features: product.features || [],
       in_stock: product.in_stock ?? true,
       featured: product.featured ?? false,
     });
+    setNewImageUrl('');
+    setNewFeature('');
     setIsDialogOpen(true);
   };
 
@@ -106,7 +123,10 @@ export default function AdminProducts() {
       category: formData.category,
       price: parseFloat(formData.price) || 0,
       description: formData.description || null,
+      full_description: formData.full_description || null,
       image_url: formData.image_url || null,
+      images: formData.images.length > 0 ? formData.images : null,
+      features: formData.features.length > 0 ? formData.features : null,
       in_stock: formData.in_stock,
       featured: formData.featured,
     };
@@ -145,17 +165,43 @@ export default function AdminProducts() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery: boolean = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const result = await productsApi.uploadImage(file);
     if (result.success && result.data?.url) {
-      setFormData(prev => ({ ...prev, image_url: result.data!.url }));
+      if (isGallery) {
+        setFormData(prev => ({ ...prev, images: [...prev.images, result.data!.url] }));
+      } else {
+        setFormData(prev => ({ ...prev, image_url: result.data!.url }));
+      }
       toast({ title: 'Image uploaded' });
     } else {
       toast({ title: 'Failed to upload image', variant: 'destructive' });
     }
+  };
+
+  const addImageUrl = () => {
+    if (newImageUrl.trim()) {
+      setFormData(prev => ({ ...prev, images: [...prev.images, newImageUrl.trim()] }));
+      setNewImageUrl('');
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
+  };
+
+  const addFeature = () => {
+    if (newFeature.trim()) {
+      setFormData(prev => ({ ...prev, features: [...prev.features, newFeature.trim()] }));
+      setNewFeature('');
+    }
+  };
+
+  const removeFeature = (index: number) => {
+    setFormData(prev => ({ ...prev, features: prev.features.filter((_, i) => i !== index) }));
   };
 
   return (
@@ -225,6 +271,12 @@ export default function AdminProducts() {
                   {!product.in_stock && (
                     <Badge variant="destructive" className="absolute top-2 left-2">Out of Stock</Badge>
                   )}
+                  {product.images && product.images.length > 0 && (
+                    <Badge variant="secondary" className="absolute bottom-2 right-2">
+                      <ImageIcon className="h-3 w-3 mr-1" />
+                      {product.images.length + 1}
+                    </Badge>
+                  )}
                 </div>
                 <CardContent className="p-4">
                   <h3 className="font-semibold text-foreground line-clamp-1">{product.name}</h3>
@@ -267,122 +319,227 @@ export default function AdminProducts() {
 
       {/* Product Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingProduct ? 'Edit Product' : 'Add New Product'}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Image Upload */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Product Image</label>
-              <div className="flex items-center gap-4">
-                {formData.image_url ? (
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted">
-                    <img
-                      src={formData.image_url}
-                      alt="Product"
-                      className="object-cover w-full h-full"
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="images">Images</TabsTrigger>
+              <TabsTrigger value="details">Details</TabsTrigger>
+            </TabsList>
+
+            {/* Basic Info Tab */}
+            <TabsContent value="basic" className="space-y-4 py-4">
+              {/* Main Image Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Main Product Image</label>
+                <div className="flex items-center gap-4">
+                  {formData.image_url ? (
+                    <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted">
+                      <img
+                        src={formData.image_url}
+                        alt="Product"
+                        className="object-cover w-full h-full"
+                      />
+                      <button
+                        onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                        className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary">
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground mt-1">Upload</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleImageUpload(e, false)}
+                      />
+                    </label>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Or paste image URL..."
+                      value={formData.image_url}
+                      onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
                     />
-                    <button
-                      onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
                   </div>
-                ) : (
-                  <label className="w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary">
+                </div>
+              </div>
+
+              {/* Name */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Product Name *</label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Ice Block Machine 500kg"
+                />
+              </div>
+
+              {/* Category */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Category *</label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Price */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Price (KES)</label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="e.g. 285000"
+                />
+              </div>
+
+              {/* Toggles */}
+              <div className="flex gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.in_stock}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, in_stock: checked }))}
+                  />
+                  <label className="text-sm font-medium">In Stock</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formData.featured}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
+                  />
+                  <label className="text-sm font-medium">Featured</label>
+                </div>
+              </div>
+
+              {/* Short Description */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Short Description</label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Brief product description for listings..."
+                  rows={3}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Images Tab */}
+            <TabsContent value="images" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Image Gallery</label>
+                <p className="text-xs text-muted-foreground">Add additional images for the product gallery</p>
+                
+                {/* Gallery Images Grid */}
+                <div className="grid grid-cols-4 gap-3 mt-3">
+                  {formData.images.map((img, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                      <img src={img} alt={`Gallery ${index + 1}`} className="object-cover w-full h-full" />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Upload Button */}
+                  <label className="aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary">
                     <Upload className="h-6 w-6 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground mt-1">Upload</span>
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleImageUpload}
+                      onChange={(e) => handleImageUpload(e, true)}
                     />
                   </label>
-                )}
-                <div className="flex-1">
+                </div>
+
+                {/* Add by URL */}
+                <div className="flex gap-2 mt-4">
                   <Input
                     placeholder="Or paste image URL..."
-                    value={formData.image_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addImageUrl())}
                   />
+                  <Button type="button" variant="outline" onClick={addImageUrl}>
+                    Add
+                  </Button>
                 </div>
               </div>
-            </div>
+            </TabsContent>
 
-            {/* Name */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Product Name *</label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g. Ice Block Machine 500kg"
-              />
-            </div>
+            {/* Details Tab */}
+            <TabsContent value="details" className="space-y-4 py-4">
+              {/* Full Description */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Full Description</label>
+                <Textarea
+                  value={formData.full_description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, full_description: e.target.value }))}
+                  placeholder="Detailed product description for the product page..."
+                  rows={6}
+                />
+              </div>
 
-            {/* Category */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Category *</label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              {/* Features */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Key Features</label>
+                <p className="text-xs text-muted-foreground">Add key features or selling points</p>
+                
+                {/* Features List */}
+                <div className="space-y-2 mt-2">
+                  {formData.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-secondary/50 rounded-lg px-3 py-2">
+                      <span className="flex-1 text-sm">{feature}</span>
+                      <button
+                        onClick={() => removeFeature(index)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
 
-            {/* Price */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Price (KES)</label>
-              <Input
-                type="number"
-                value={formData.price}
-                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                placeholder="e.g. 285000"
-              />
-            </div>
-
-            {/* Toggles */}
-            <div className="flex gap-6">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.in_stock}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, in_stock: checked }))}
-                />
-                <label className="text-sm font-medium">In Stock</label>
+                {/* Add Feature */}
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    placeholder="Add a feature..."
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+                  />
+                  <Button type="button" variant="outline" onClick={addFeature}>
+                    Add
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formData.featured}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
-                />
-                <label className="text-sm font-medium">Featured</label>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Product description..."
-                rows={4}
-              />
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>

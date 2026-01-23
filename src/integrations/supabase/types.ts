@@ -128,8 +128,11 @@ export type Database = {
           created_at: string
           description: string | null
           featured: boolean | null
+          features: string[] | null
+          full_description: string | null
           id: string
           image_url: string | null
+          images: string[] | null
           in_stock: boolean | null
           name: string
           price: number
@@ -141,8 +144,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean | null
+          features?: string[] | null
+          full_description?: string | null
           id?: string
           image_url?: string | null
+          images?: string[] | null
           in_stock?: boolean | null
           name: string
           price?: number
@@ -154,8 +160,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean | null
+          features?: string[] | null
+          full_description?: string | null
           id?: string
           image_url?: string | null
+          images?: string[] | null
           in_stock?: boolean | null
           name?: string
           price?: number

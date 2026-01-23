@@ -12,9 +12,12 @@ export interface Product {
   id: string;
   name: string;
   description: string | null;
+  full_description: string | null;
   price: number;
   category: string | null;
   image_url: string | null;
+  images: string[] | null;
+  features: string[] | null;
   in_stock: boolean | null;
   featured: boolean | null;
   specifications: any;
