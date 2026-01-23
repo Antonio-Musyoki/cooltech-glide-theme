@@ -2,28 +2,43 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { products, categories, formatPrice } from "@/data/products";
-import { Eye, ShoppingCart, Search, Filter } from "lucide-react";
+import { categories, formatPrice } from "@/data/products";
+import { Eye, ShoppingCart, Search, Filter, Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
+import { productsApi, Product } from "@/services/supabaseService";
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const selectedCategory = searchParams.get("category") || "all";
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      const response = await productsApi.getAll();
+      if (response.data) {
+        setProducts(response.data);
+      }
+      setLoading(false);
+    };
+    loadProducts();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesCategory = selectedCategory === "all" || 
-        product.category.toLowerCase().includes(selectedCategory.toLowerCase());
+        (product.category?.toLowerCase().includes(selectedCategory.toLowerCase()));
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase());
+        (product.description?.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, products]);
 
   const handleCategoryChange = (category: string) => {
     if (category === "all") {
@@ -117,71 +132,76 @@ const Shop = () => {
 
               {/* Products Grid */}
               <div className="flex-1">
-                <p className="text-muted-foreground mb-6">
-                  Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
-                </p>
-                
-                {filteredProducts.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">No products found matching your criteria.</p>
-                    <Button variant="outline" className="mt-4" onClick={() => {
-                      setSearchQuery("");
-                      handleCategoryChange("all");
-                    }}>
-                      Clear Filters
-                    </Button>
+                {loading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-3 text-muted-foreground">Loading products...</span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredProducts.map((product) => (
-                      <Card key={product.id} variant="product" className="group overflow-hidden">
-                        {/* Product Image */}
-                        <div className="relative aspect-[4/3] overflow-hidden">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          <button className="absolute top-3 right-3 w-10 h-10 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-primary hover:text-primary-foreground">
-                            <Eye className="h-5 w-5" />
-                          </button>
-                        </div>
+                  <>
+                    <p className="text-muted-foreground mb-6">
+                      Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""}
+                    </p>
+                    
+                    {filteredProducts.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground">No products found matching your criteria.</p>
+                        <Button variant="outline" className="mt-4" onClick={() => {
+                          setSearchQuery("");
+                          handleCategoryChange("all");
+                        }}>
+                          Clear Filters
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {filteredProducts.map((product) => (
+                          <Card key={product.id} variant="product" className="group overflow-hidden">
+                            {/* Product Image */}
+                            <div className="relative aspect-[4/3] overflow-hidden">
+                              <img
+                                src={product.image_url || "/placeholder.svg"}
+                                alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <button className="absolute top-3 right-3 w-10 h-10 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-primary hover:text-primary-foreground">
+                                <Eye className="h-5 w-5" />
+                              </button>
+                            </div>
 
-                        <CardHeader className="pb-2">
-                          <p className="text-xs text-primary font-medium uppercase tracking-wide">{product.category}</p>
-                          <CardTitle className="text-lg line-clamp-2">{product.name}</CardTitle>
-                        </CardHeader>
+                            <CardHeader className="pb-2">
+                              <p className="text-xs text-primary font-medium uppercase tracking-wide">{product.category}</p>
+                              <CardTitle className="text-lg line-clamp-2">{product.name}</CardTitle>
+                            </CardHeader>
 
-                        <CardContent className="pb-3">
-                          <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                        </CardContent>
+                            <CardContent className="pb-3">
+                              <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                            </CardContent>
 
-                        <CardFooter className="flex flex-col gap-3">
-                          <div className="w-full flex items-center justify-between">
-                            {product.isQuoteOnly ? (
-                              <span className="text-primary font-semibold">Request Quote</span>
-                            ) : (
-                              <span className="text-xl font-bold text-foreground">{formatPrice(product.price!)}</span>
-                            )}
-                          </div>
-                          <div className="w-full flex gap-2">
-                            <Link to={`/product/${product.id}`} className="flex-1">
-                              <Button variant="outline" size="sm" className="w-full">
-                                View Details
-                              </Button>
-                            </Link>
-                            <Link to={product.isQuoteOnly ? `/quote?product=${product.id}` : `/shop`}>
-                              <Button variant="default" size="sm">
-                                <ShoppingCart className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
+                            <CardFooter className="flex flex-col gap-3">
+                              <div className="w-full flex items-center justify-between">
+                                <span className="text-xl font-bold text-foreground">{formatPrice(product.price)}</span>
+                              </div>
+                              <div className="w-full flex gap-2">
+                                <Link to={`/product/${product.id}`} className="flex-1">
+                                  <Button variant="outline" size="sm" className="w-full">
+                                    View Details
+                                  </Button>
+                                </Link>
+                                <Link to={`/quote?product=${product.id}`}>
+                                  <Button variant="default" size="sm">
+                                    <ShoppingCart className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </div>
+                            </CardFooter>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
