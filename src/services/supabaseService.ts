@@ -193,6 +193,24 @@ export const productsApi = {
   },
 };
 
+// Send notification helper
+const sendNotification = async (type: 'quote' | 'booking', data: any) => {
+  try {
+    const response = await supabase.functions.invoke('send-notification', {
+      body: { type, data },
+    });
+    
+    if (response.error) {
+      console.error('Notification error:', response.error);
+    } else {
+      console.log('Notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Failed to send notification:', error);
+    // Don't throw - notification failure shouldn't block submission
+  }
+};
+
 // Quotes API
 export const quotesApi = {
   submit: async (quote: QuoteRequest): Promise<ApiResponse<{ id: string }>> => {
@@ -204,6 +222,10 @@ export const quotesApi = {
         .single();
 
       if (error) throw error;
+      
+      // Send notification (fire and forget)
+      sendNotification('quote', quote);
+      
       return { success: true, data: { id: data.id } };
     } catch (error: any) {
       console.error('Error submitting quote:', error);
@@ -270,6 +292,10 @@ export const bookingsApi = {
         .single();
 
       if (error) throw error;
+      
+      // Send notification (fire and forget)
+      sendNotification('booking', booking);
+      
       return { success: true, data: { id: data.id } };
     } catch (error: any) {
       console.error('Error submitting booking:', error);
