@@ -70,14 +70,14 @@ const Services = () => {
                               </li>
                             ))}
                           </ul>
-                          <div className="flex flex-col sm:flex-row gap-3">
+                          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                             <Link to="/booking">
-                              <Button variant="default" size="lg">
+                              <Button variant="default" size="lg" className="w-full sm:w-auto">
                                 Book This Service
                               </Button>
                             </Link>
                             <Link to="/quote">
-                              <Button variant="outline" size="lg">
+                              <Button variant="outline" size="lg" className="w-full sm:w-auto">
                                 Get a Quote
                                 <ArrowRight className="h-5 w-5 ml-2" />
                               </Button>
