@@ -194,7 +194,7 @@ export const productsApi = {
 };
 
 // Send notification helper
-const sendNotification = async (type: 'quote' | 'booking', data: any) => {
+const sendNotification = async (type: 'quote' | 'booking' | 'contact', data: any) => {
   try {
     const response = await supabase.functions.invoke('send-notification', {
       body: { type, data },
@@ -362,6 +362,10 @@ export const contactsApi = {
         .single();
 
       if (error) throw error;
+      
+      // Send notification (fire and forget)
+      sendNotification('contact', contact);
+      
       return { success: true, data: { id: data.id } };
     } catch (error: any) {
       console.error('Error submitting contact:', error);
