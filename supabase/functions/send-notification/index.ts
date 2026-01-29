@@ -270,7 +270,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "CoolTech <onboarding@resend.dev>",
+        from: "CoolTech Kenya <noreply@cooltechrefrigeration.co.ke>",
         to: ADMIN_EMAILS,
         subject: adminSubject,
         html: generateAdminEmail(type, data),
@@ -293,7 +293,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "CoolTech Kenya <onboarding@resend.dev>",
+        from: "CoolTech Kenya <noreply@cooltechrefrigeration.co.ke>",
         to: [data.email],
         subject: userSubject,
         html: generateUserConfirmationEmail(type, data),
