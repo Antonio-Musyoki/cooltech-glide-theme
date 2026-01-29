@@ -14,7 +14,7 @@ const ADMIN_EMAILS = [
 ];
 
 interface NotificationRequest {
-  type: "quote" | "booking";
+  type: "quote" | "booking" | "contact";
   data: {
     name: string;
     email: string;
@@ -25,13 +25,13 @@ interface NotificationRequest {
     address?: string;
     preferred_date?: string;
     preferred_time?: string;
+    subject?: string;
   };
 }
 
 const generateAdminEmail = (type: string, data: NotificationRequest["data"]) => {
-  const isQuote = type === "quote";
-  return isQuote
-    ? `
+  if (type === "quote") {
+    return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 10px;">
           New Quote Request
@@ -74,8 +74,46 @@ const generateAdminEmail = (type: string, data: NotificationRequest["data"]) => 
           Please respond to this quote request within 24 hours.
         </p>
       </div>
-    `
-    : `
+    `;
+  } else if (type === "contact") {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 10px;">
+          New Contact Message
+        </h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">From:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">${data.name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Email:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="mailto:${data.email}">${data.email}</a></td>
+          </tr>
+          ${data.phone ? `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Phone:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="tel:${data.phone}">${data.phone}</a></td>
+          </tr>
+          ` : ""}
+          ${data.subject ? `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Subject:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">${data.subject}</td>
+          </tr>
+          ` : ""}
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Message:</td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">${data.message}</td>
+          </tr>
+        </table>
+        <p style="margin-top: 20px; color: #666;">
+          Please respond to this inquiry within 24 hours.
+        </p>
+      </div>
+    `;
+  } else {
+    return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 10px;">
           New Booking Request
@@ -131,12 +169,12 @@ const generateAdminEmail = (type: string, data: NotificationRequest["data"]) => 
         </p>
       </div>
     `;
+  }
 };
 
 const generateUserConfirmationEmail = (type: string, data: NotificationRequest["data"]) => {
-  const isQuote = type === "quote";
-  return isQuote
-    ? `
+  if (type === "quote") {
+    return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 20px;">
         <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
           <div style="text-align: center; margin-bottom: 20px;">
@@ -183,8 +221,57 @@ const generateUserConfirmationEmail = (type: string, data: NotificationRequest["
           © ${new Date().getFullYear()} CoolTech Kenya. All rights reserved.
         </p>
       </div>
-    `
-    : `
+    `;
+  } else if (type === "contact") {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 20px;">
+        <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #0077b6; margin: 0;">CoolTech Kenya</h1>
+            <p style="color: #666; margin: 5px 0 0;">Refrigeration & HVAC Solutions</p>
+          </div>
+          
+          <h2 style="color: #333; border-bottom: 2px solid #0077b6; padding-bottom: 10px;">
+            ✅ Message Received
+          </h2>
+          
+          <p style="color: #333; font-size: 16px;">Dear ${data.name},</p>
+          
+          <p style="color: #555; line-height: 1.6;">
+            Thank you for contacting CoolTech Kenya! We have received your message and our team will get back to you shortly.
+          </p>
+          
+          <div style="background: #f0f9ff; border-left: 4px solid #0077b6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #0077b6; margin: 0 0 10px;">Your Message:</h3>
+            ${data.subject ? `<p style="margin: 5px 0;"><strong>Subject:</strong> ${data.subject}</p>` : ""}
+            <p style="margin: 5px 0;"><strong>Message:</strong> ${data.message}</p>
+          </div>
+          
+          <p style="color: #555; line-height: 1.6;">
+            <strong>What happens next?</strong><br>
+            A member of our team will respond to your inquiry within <strong>24 hours</strong>.
+          </p>
+          
+          <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #2e7d32;">
+              <strong>Need urgent assistance?</strong><br>
+              Call us at <a href="tel:+254707154948" style="color: #0077b6;">+254 707 154 948</a>
+            </p>
+          </div>
+          
+          <p style="color: #555;">
+            Best regards,<br>
+            <strong>The CoolTech Kenya Team</strong>
+          </p>
+        </div>
+        
+        <p style="text-align: center; color: #999; font-size: 12px; margin-top: 20px;">
+          © ${new Date().getFullYear()} CoolTech Kenya. All rights reserved.
+        </p>
+      </div>
+    `;
+  } else {
+    return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 20px;">
         <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
           <div style="text-align: center; margin-bottom: 20px;">
@@ -234,6 +321,7 @@ const generateUserConfirmationEmail = (type: string, data: NotificationRequest["
         </p>
       </div>
     `;
+  }
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -253,13 +341,16 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing required fields: type and data");
     }
 
-    const isQuote = type === "quote";
-    const adminSubject = isQuote
+    const adminSubject = type === "quote"
       ? `🔔 New Quote Request from ${data.name}`
+      : type === "contact"
+      ? `📧 New Contact Message from ${data.name}`
       : `📅 New Booking from ${data.name}`;
     
-    const userSubject = isQuote
+    const userSubject = type === "quote"
       ? `Your Quote Request - CoolTech Kenya`
+      : type === "contact"
+      ? `Message Received - CoolTech Kenya`
       : `Booking Confirmation - CoolTech Kenya`;
 
     // Send admin notification email
