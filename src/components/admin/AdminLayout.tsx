@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Snowflake,
+  Newspaper,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/blog', label: 'Blog Posts', icon: Newspaper },
   { href: '/admin/quotes', label: 'Quotes', icon: FileText },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
   { href: '/admin/contacts', label: 'Contacts', icon: MessageSquare },
