@@ -17,6 +17,7 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import FAQ from "./pages/FAQ";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/faqs" element={<FAQ />} />
               
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
