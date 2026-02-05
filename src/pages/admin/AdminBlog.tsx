@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   Select,
   SelectContent,
@@ -469,15 +470,13 @@ const AdminBlog = () => {
 
                   <div>
                     <Label htmlFor="content">Content *</Label>
-                    <Textarea
-                      id="content"
+                    <RichTextEditor
                       value={editingPost?.content || ""}
-                      onChange={(e) =>
-                        setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : null))
+                      onChange={(value) =>
+                        setEditingPost((prev) => (prev ? { ...prev, content: value } : null))
                       }
                       placeholder="Write your blog post content here..."
-                      rows={12}
-                      required
+                      className="min-h-[400px]"
                     />
                   </div>
 
