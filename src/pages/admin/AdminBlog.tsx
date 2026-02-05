@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import {
   Select,
   SelectContent,
@@ -482,15 +483,13 @@ const AdminBlog = () => {
 
                   <div>
                     <Label htmlFor="featured_image">Featured Image URL</Label>
-                    <Input
-                      id="featured_image"
+                    <ImageUploader
                       value={editingPost?.featured_image || ""}
-                      onChange={(e) =>
+                      onChange={(url) =>
                         setEditingPost((prev) =>
-                          prev ? { ...prev, featured_image: e.target.value } : null
+                          prev ? { ...prev, featured_image: url } : null
                         )
                       }
-                      placeholder="https://example.com/image.jpg"
                     />
                   </div>
                 </div>
