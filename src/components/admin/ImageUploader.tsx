@@ -1,11 +1,12 @@
- import { useState, useRef } from "react";
- import { supabase } from "@/integrations/supabase/client";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { useToast } from "@/hooks/use-toast";
+import { useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import { Upload, X, Image as ImageIcon, Loader2, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MediaLibrary } from "@/components/admin/MediaLibrary";
+import { optimizeImage, formatBytes } from "@/lib/image-optimization";
  
  interface ImageUploaderProps {
    value: string;
@@ -46,35 +47,47 @@ import { MediaLibrary } from "@/components/admin/MediaLibrary";
        return;
      }
  
-     setIsUploading(true);
- 
-     try {
-       const fileExt = file.name.split(".").pop();
-       const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
- 
-       const { error: uploadError } = await supabase.storage
-         .from(bucket)
-         .upload(fileName, file, {
-           cacheControl: "3600",
-           upsert: false,
-         });
- 
-       if (uploadError) throw uploadError;
- 
-       const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
- 
-       onChange(data.publicUrl);
-       toast({ title: "Image uploaded successfully" });
-     } catch (error: unknown) {
-       console.error("Upload error:", error);
-       toast({
-         title: "Upload failed",
-         description: error instanceof Error ? error.message : "Failed to upload image",
-         variant: "destructive",
-       });
-     } finally {
-       setIsUploading(false);
-     }
+      setIsUploading(true);
+
+      try {
+        // Optimize image and generate thumbnail
+        const { optimized, thumbnail, originalSize, optimizedSize, thumbnailSize } =
+          await optimizeImage(file);
+
+        const baseName = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+        const ext = optimized.name.split(".").pop();
+        const optimizedPath = `${folder}/${baseName}.${ext}`;
+        const thumbPath = `${folder}/${baseName}-thumb.${ext}`;
+
+        // Upload optimized image
+        const { error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(optimizedPath, optimized, { cacheControl: "3600", upsert: false });
+        if (uploadError) throw uploadError;
+
+        // Upload thumbnail
+        await supabase.storage
+          .from(bucket)
+          .upload(thumbPath, thumbnail, { cacheControl: "3600", upsert: false });
+
+        const { data } = supabase.storage.from(bucket).getPublicUrl(optimizedPath);
+        onChange(data.publicUrl);
+
+        const saved = originalSize - optimizedSize;
+        toast({
+          title: "Image optimized & uploaded",
+          description: `${formatBytes(originalSize)} → ${formatBytes(optimizedSize)} (saved ${formatBytes(saved)}). Thumbnail: ${formatBytes(thumbnailSize)}`,
+        });
+      } catch (error: unknown) {
+        console.error("Upload error:", error);
+        toast({
+          title: "Upload failed",
+          description: error instanceof Error ? error.message : "Failed to upload image",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUploading(false);
+      }
    };
  
    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
