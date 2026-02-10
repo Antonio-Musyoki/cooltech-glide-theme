@@ -1,36 +1,40 @@
- import { useEditor, EditorContent, Editor } from "@tiptap/react";
- import StarterKit from "@tiptap/starter-kit";
- import Link from "@tiptap/extension-link";
- import Image from "@tiptap/extension-image";
- import Placeholder from "@tiptap/extension-placeholder";
- import { cn } from "@/lib/utils";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import {
-   Popover,
-   PopoverContent,
-   PopoverTrigger,
- } from "@/components/ui/popover";
- import {
-   Bold,
-   Italic,
-   Strikethrough,
-   Code,
-   List,
-   ListOrdered,
-   Quote,
-   Undo,
-   Redo,
-   Link as LinkIcon,
-   Image as ImageIcon,
-   Heading1,
-   Heading2,
-   Heading3,
-   Minus,
-   Pilcrow,
-   RemoveFormatting,
- } from "lucide-react";
- import { useState, useCallback, useEffect } from "react";
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  List,
+  ListOrdered,
+  Quote,
+  Undo,
+  Redo,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Heading1,
+  Heading2,
+  Heading3,
+  Minus,
+  Pilcrow,
+  RemoveFormatting,
+  Upload,
+  Loader2,
+} from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
  
  interface RichTextEditorProps {
    value: string;
@@ -40,10 +44,40 @@
  }
  
  const MenuBar = ({ editor }: { editor: Editor | null }) => {
-   const [linkUrl, setLinkUrl] = useState("");
-   const [imageUrl, setImageUrl] = useState("");
-   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
-   const [imagePopoverOpen, setImagePopoverOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [imagePopoverOpen, setImagePopoverOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!editor) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file type", description: "Please upload an image file", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 5MB", variant: "destructive" });
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `content/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const { error } = await supabase.storage.from("blog-images").upload(fileName, file, { cacheControl: "3600", upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("blog-images").getPublicUrl(fileName);
+      editor.chain().focus().setImage({ src: data.publicUrl }).run();
+      setImagePopoverOpen(false);
+      toast({ title: "Image inserted" });
+    } catch (err: unknown) {
+      toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Failed to upload", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [editor, toast]);
  
    const setLink = useCallback(() => {
     if (!editor) return;
@@ -244,20 +278,45 @@
              <ImageIcon className="h-4 w-4" />
            </Button>
          </PopoverTrigger>
-         <PopoverContent className="w-80" align="start">
-           <div className="flex gap-2">
-             <Input
-               placeholder="Enter image URL..."
-               value={imageUrl}
-               onChange={(e) => setImageUrl(e.target.value)}
-               onKeyDown={(e) => e.key === "Enter" && addImage()}
-             />
-             <Button type="button" size="sm" onClick={addImage}>
-               Add
-             </Button>
-           </div>
-         </PopoverContent>
-       </Popover>
+        <PopoverContent className="w-80" align="start">
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter image URL..."
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addImage()}
+                />
+                <Button type="button" size="sm" onClick={addImage}>
+                  Add
+                </Button>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-popover px-2 text-muted-foreground">or</span></div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }}
+                disabled={isUploading}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                {isUploading ? "Uploading..." : "Upload Image"}
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
  
        <div className="mx-1 h-6 w-px bg-border" />
  
