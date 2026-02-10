@@ -37,6 +37,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MediaLibrary } from "@/components/admin/MediaLibrary";
+import { optimizeImage, formatBytes } from "@/lib/image-optimization";
  
  interface RichTextEditorProps {
    value: string;
@@ -66,14 +67,29 @@ import { MediaLibrary } from "@/components/admin/MediaLibrary";
     }
     setIsUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `content/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const { error } = await supabase.storage.from("blog-images").upload(fileName, file, { cacheControl: "3600", upsert: false });
+      const { optimized, thumbnail, originalSize, optimizedSize, thumbnailSize } =
+        await optimizeImage(file);
+
+      const baseName = `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+      const ext = optimized.name.split(".").pop();
+      const optimizedPath = `content/${baseName}.${ext}`;
+      const thumbPath = `content/${baseName}-thumb.${ext}`;
+
+      const { error } = await supabase.storage.from("blog-images").upload(optimizedPath, optimized, { cacheControl: "3600", upsert: false });
       if (error) throw error;
-      const { data } = supabase.storage.from("blog-images").getPublicUrl(fileName);
+
+      // Upload thumbnail silently
+      await supabase.storage.from("blog-images").upload(thumbPath, thumbnail, { cacheControl: "3600", upsert: false });
+
+      const { data } = supabase.storage.from("blog-images").getPublicUrl(optimizedPath);
       editor.chain().focus().setImage({ src: data.publicUrl }).run();
       setImagePopoverOpen(false);
-      toast({ title: "Image inserted" });
+
+      const saved = originalSize - optimizedSize;
+      toast({
+        title: "Image optimized & inserted",
+        description: `${formatBytes(originalSize)} → ${formatBytes(optimizedSize)} (saved ${formatBytes(saved)})`,
+      });
     } catch (err: unknown) {
       toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Failed to upload", variant: "destructive" });
     } finally {
