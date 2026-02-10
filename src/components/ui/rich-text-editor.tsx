@@ -31,10 +31,12 @@ import {
   RemoveFormatting,
   Upload,
   Loader2,
+  FolderOpen,
 } from "lucide-react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MediaLibrary } from "@/components/admin/MediaLibrary";
  
  interface RichTextEditorProps {
    value: string;
@@ -314,6 +316,18 @@ import { useToast } from "@/hooks/use-toast";
                 {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                 {isUploading ? "Uploading..." : "Upload Image"}
               </Button>
+              <MediaLibrary
+                onSelect={(url) => {
+                  editor?.chain().focus().setImage({ src: url }).run();
+                  setImagePopoverOpen(false);
+                }}
+                trigger={
+                  <Button type="button" variant="outline" size="sm" className="w-full gap-2">
+                    <FolderOpen className="h-4 w-4" />
+                    Media Library
+                  </Button>
+                }
+              />
             </div>
           </PopoverContent>
         </Popover>

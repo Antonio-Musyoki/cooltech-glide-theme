@@ -3,8 +3,9 @@
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { useToast } from "@/hooks/use-toast";
- import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
- import { cn } from "@/lib/utils";
+import { Upload, X, Image as ImageIcon, Loader2, FolderOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { MediaLibrary } from "@/components/admin/MediaLibrary";
  
  interface ImageUploaderProps {
    value: string;
@@ -167,26 +168,35 @@
          </div>
        )}
  
-       <div className="flex items-center gap-2">
-         <div className="flex-1">
-           <Input
-             placeholder="Or paste image URL..."
-             value={value}
-             onChange={(e) => onChange(e.target.value)}
-           />
-         </div>
-         {!value && (
-           <Button
-             type="button"
-             variant="outline"
-             size="icon"
-             onClick={() => fileInputRef.current?.click()}
-             disabled={isUploading}
-           >
-             <ImageIcon className="h-4 w-4" />
-           </Button>
-         )}
-       </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <Input
+              placeholder="Or paste image URL..."
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+            />
+          </div>
+          <MediaLibrary
+            onSelect={onChange}
+            bucket={bucket}
+            trigger={
+              <Button type="button" variant="outline" size="icon" title="Media Library">
+                <FolderOpen className="h-4 w-4" />
+              </Button>
+            }
+          />
+          {!value && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              <ImageIcon className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
      </div>
    );
  };
