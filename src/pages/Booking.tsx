@@ -125,6 +125,7 @@ const Booking = () => {
                       <label className="text-sm font-medium">Full Name *</label>
                       <Input
                         required
+                        maxLength={200}
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="John Doe"
@@ -136,6 +137,7 @@ const Booking = () => {
                       <Input
                         type="email"
                         required
+                        maxLength={254}
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="john@example.com"
@@ -149,6 +151,7 @@ const Booking = () => {
                       <label className="text-sm font-medium">Phone Number</label>
                       <Input
                         type="tel"
+                        maxLength={50}
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="+254 7XX XXX XXX"
@@ -158,6 +161,7 @@ const Booking = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Service Address</label>
                       <Input
+                        maxLength={500}
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Your address in Nairobi"
@@ -231,6 +235,7 @@ const Booking = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Additional Notes</label>
                     <Textarea
+                      maxLength={10000}
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       placeholder="Describe your issue or what service you need..."

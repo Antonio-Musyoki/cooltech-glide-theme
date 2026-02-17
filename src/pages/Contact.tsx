@@ -150,6 +150,7 @@ const Contact = () => {
                           <label className="text-sm font-medium">Full Name *</label>
                           <Input
                             required
+                            maxLength={200}
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             placeholder="John Doe"
@@ -161,6 +162,7 @@ const Contact = () => {
                           <Input
                             type="email"
                             required
+                            maxLength={254}
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             placeholder="john@example.com"
@@ -174,6 +176,7 @@ const Contact = () => {
                           <label className="text-sm font-medium">Phone Number</label>
                           <Input
                             type="tel"
+                            maxLength={50}
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="+254 7XX XXX XXX"
@@ -184,6 +187,7 @@ const Contact = () => {
                           <label className="text-sm font-medium">Subject *</label>
                           <Input
                             required
+                            maxLength={300}
                             value={formData.subject}
                             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                             placeholder="How can we help?"
@@ -196,6 +200,7 @@ const Contact = () => {
                         <label className="text-sm font-medium">Message *</label>
                         <Textarea
                           required
+                          maxLength={10000}
                           value={formData.message}
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           placeholder="Tell us more about your inquiry..."

@@ -107,6 +107,7 @@ const Quote = () => {
                       <label className="text-sm font-medium">Full Name *</label>
                       <Input
                         required
+                        maxLength={200}
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="John Doe"
@@ -118,6 +119,7 @@ const Quote = () => {
                       <Input
                         type="email"
                         required
+                        maxLength={254}
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="john@example.com"
@@ -128,6 +130,7 @@ const Quote = () => {
                       <label className="text-sm font-medium">Phone Number</label>
                       <Input
                         type="tel"
+                        maxLength={50}
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="+254 7XX XXX XXX"
@@ -137,6 +140,7 @@ const Quote = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Company Name</label>
                       <Input
+                        maxLength={300}
                         value={formData.company}
                         onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                         placeholder="Your Company"
@@ -170,6 +174,7 @@ const Quote = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Additional Details</label>
                     <Textarea
+                      maxLength={10000}
                       value={formData.details}
                       onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                       placeholder="Please provide any specific requirements, dimensions, or questions you have..."
