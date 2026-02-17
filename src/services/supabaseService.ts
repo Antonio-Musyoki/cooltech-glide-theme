@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { contactSchema, quoteSchema, bookingSchema, validateForm } from '@/lib/form-validation';
 
 // Generic response type
 interface ApiResponse<T> {
@@ -215,9 +216,14 @@ const sendNotification = async (type: 'quote' | 'booking' | 'contact', data: any
 export const quotesApi = {
   submit: async (quote: QuoteRequest): Promise<ApiResponse<{ id: string }>> => {
     try {
+      const validation = validateForm(quoteSchema, quote);
+      if (!validation.success) {
+        return { success: false, error: validation.errors?.join(', ') };
+      }
+
       const { data, error } = await supabase
         .from('quotes')
-        .insert(quote)
+        .insert(validation.data as any)
         .select('id')
         .single();
 
@@ -285,9 +291,14 @@ export const quotesApi = {
 export const bookingsApi = {
   submit: async (booking: BookingRequest): Promise<ApiResponse<{ id: string }>> => {
     try {
+      const validation = validateForm(bookingSchema, booking);
+      if (!validation.success) {
+        return { success: false, error: validation.errors?.join(', ') };
+      }
+
       const { data, error } = await supabase
         .from('bookings')
-        .insert(booking)
+        .insert(validation.data as any)
         .select('id')
         .single();
 
@@ -355,9 +366,14 @@ export const bookingsApi = {
 export const contactsApi = {
   submit: async (contact: ContactRequest): Promise<ApiResponse<{ id: string }>> => {
     try {
+      const validation = validateForm(contactSchema, contact);
+      if (!validation.success) {
+        return { success: false, error: validation.errors?.join(', ') };
+      }
+
       const { data, error } = await supabase
         .from('contacts')
-        .insert(contact)
+        .insert(validation.data as any)
         .select('id')
         .single();
 
