@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Trash2, Download, Send, Loader2 } from 'lucide-react';
-import { QuoteRecord } from '@/services/supabaseService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Trash2, Download, Send, Loader2, Save, BookTemplate } from 'lucide-react';
+import { QuoteRecord, quoteTemplatesApi, QuoteTemplate } from '@/services/supabaseService';
 import { generateQuotePDF, getQuotePDFBase64, QuoteFormData, QuoteLineItem } from '@/lib/generate-quote-pdf';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,9 @@ interface QuoteGeneratorProps {
 export function QuoteGenerator({ quote, open, onOpenChange }: QuoteGeneratorProps) {
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
+  const [templates, setTemplates] = useState<QuoteTemplate[]>([]);
+  const [templateName, setTemplateName] = useState('');
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
 
   const [items, setItems] = useState<QuoteLineItem[]>([
     { description: '', quantity: 1, unitPrice: 0 },
@@ -29,6 +33,61 @@ export function QuoteGenerator({ quote, open, onOpenChange }: QuoteGeneratorProp
   const [terms, setTerms] = useState('');
 
   const quoteNumber = `QT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
+
+  useEffect(() => {
+    if (open) loadTemplates();
+  }, [open]);
+
+  const loadTemplates = async () => {
+    const result = await quoteTemplatesApi.getAll();
+    if (result.success && result.data) setTemplates(result.data);
+  };
+
+  const handleLoadTemplate = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+    setItems(template.items.map(i => ({ ...i })));
+    setValidityDays(template.validity_days);
+    if (template.notes) setNotes(template.notes);
+    if (template.terms) setTerms(template.terms);
+    toast({ title: `Template "${template.name}" loaded` });
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim()) {
+      toast({ title: 'Enter a template name', variant: 'destructive' });
+      return;
+    }
+    const validItems = items.filter(i => i.description.trim());
+    if (validItems.length === 0) {
+      toast({ title: 'Add at least one line item', variant: 'destructive' });
+      return;
+    }
+    const result = await quoteTemplatesApi.save({
+      name: templateName.trim(),
+      items: validItems,
+      notes: notes || null,
+      terms: terms || null,
+      validity_days: validityDays,
+    });
+    if (result.success) {
+      toast({ title: 'Template saved' });
+      setTemplateName('');
+      setShowSaveTemplate(false);
+      loadTemplates();
+    } else {
+      toast({ title: 'Failed to save template', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    if (!confirm(`Delete template "${name}"?`)) return;
+    const result = await quoteTemplatesApi.delete(id);
+    if (result.success) {
+      toast({ title: 'Template deleted' });
+      loadTemplates();
+    }
+  };
 
   const addItem = () => setItems([...items, { description: '', quantity: 1, unitPrice: 0 }]);
 
@@ -106,6 +165,68 @@ export function QuoteGenerator({ quote, open, onOpenChange }: QuoteGeneratorProp
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Template Controls */}
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <BookTemplate className="h-4 w-4" /> Templates
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {templates.length > 0 ? (
+                  <Select onValueChange={handleLoadTemplate}>
+                    <SelectTrigger className="w-full sm:w-60">
+                      <SelectValue placeholder="Load a template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name} ({t.items.length} items)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No saved templates yet</p>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSaveTemplate(!showSaveTemplate)}
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Save as Template
+                </Button>
+                {templates.length > 0 && (
+                  <Select onValueChange={(id) => {
+                    const t = templates.find(t => t.id === id);
+                    if (t) handleDeleteTemplate(id, t.name);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Delete template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              {showSaveTemplate && (
+                <div className="flex gap-2 items-center pt-2">
+                  <Input
+                    placeholder="Template name..."
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button size="sm" onClick={handleSaveTemplate}>Save</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowSaveTemplate(false)}>Cancel</Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Customer info summary */}
           <Card>
             <CardContent className="p-4 grid grid-cols-2 gap-3 text-sm">
