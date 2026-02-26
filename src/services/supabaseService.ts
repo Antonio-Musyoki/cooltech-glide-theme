@@ -437,6 +437,60 @@ export const contactsApi = {
   },
 };
 
+// Quote Templates API
+export interface QuoteTemplate {
+  id: string;
+  name: string;
+  items: { description: string; quantity: number; unitPrice: number }[];
+  notes: string | null;
+  terms: string | null;
+  validity_days: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const quoteTemplatesApi = {
+  getAll: async (): Promise<ApiResponse<QuoteTemplate[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from('quote_templates')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return { success: true, data: (data || []) as unknown as QuoteTemplate[] };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  save: async (template: Omit<QuoteTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<QuoteTemplate>> => {
+    try {
+      const { data, error } = await supabase
+        .from('quote_templates')
+        .insert(template as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return { success: true, data: data as unknown as QuoteTemplate };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  delete: async (id: string): Promise<ApiResponse<void>> => {
+    try {
+      const { error } = await supabase
+        .from('quote_templates')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+};
+
 // Dashboard API
 export const dashboardApi = {
   getStats: async (): Promise<ApiResponse<DashboardStats>> => {

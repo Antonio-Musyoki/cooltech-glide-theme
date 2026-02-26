@@ -251,6 +251,39 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_templates: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          name: string
+          notes: string | null
+          terms: string | null
+          updated_at: string
+          validity_days: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name: string
+          notes?: string | null
+          terms?: string | null
+          updated_at?: string
+          validity_days?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name?: string
+          notes?: string | null
+          terms?: string | null
+          updated_at?: string
+          validity_days?: number
+        }
+        Relationships: []
+      }
       quotes: {
         Row: {
           company: string | null
