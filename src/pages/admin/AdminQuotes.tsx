@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Eye, Trash2, Mail, Phone, Building, Loader2 } from 'lucide-react';
+import { Search, Eye, Trash2, Mail, Phone, Building, Loader2, FileText } from 'lucide-react';
 import { quotesApi, QuoteRecord } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { QuoteGenerator } from '@/components/admin/QuoteGenerator';
 
 type QuoteStatus = 'pending' | 'contacted' | 'quoted' | 'closed';
 
@@ -25,6 +26,7 @@ export default function AdminQuotes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedQuote, setSelectedQuote] = useState<QuoteRecord | null>(null);
+  const [generatingQuote, setGeneratingQuote] = useState<QuoteRecord | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -156,6 +158,14 @@ export default function AdminQuotes() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => setGeneratingQuote(quote)}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Generate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setSelectedQuote(quote)}
                     >
                       <Eye className="h-4 w-4 mr-1" />
@@ -265,6 +275,14 @@ export default function AdminQuotes() {
           )}
         </DialogContent>
       </Dialog>
+      {/* Quote Generator Dialog */}
+      {generatingQuote && (
+        <QuoteGenerator
+          quote={generatingQuote}
+          open={!!generatingQuote}
+          onOpenChange={(open) => !open && setGeneratingQuote(null)}
+        />
+      )}
     </AdminLayout>
   );
 }
