@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Download, Send, Loader2, Save, BookTemplate } from 'lucide-react';
+import { Plus, Trash2, Download, Send, Loader2, Save, BookTemplate, Pencil } from 'lucide-react';
 import { QuoteRecord, quoteTemplatesApi, QuoteTemplate } from '@/services/supabaseService';
 import { generateQuotePDF, getQuotePDFBase64, QuoteFormData, QuoteLineItem } from '@/lib/generate-quote-pdf';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,7 @@ export function QuoteGenerator({ quote, open, onOpenChange }: QuoteGeneratorProp
   const [templates, setTemplates] = useState<QuoteTemplate[]>([]);
   const [templateName, setTemplateName] = useState('');
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
 
   const [items, setItems] = useState<QuoteLineItem[]>([
     { description: '', quantity: 1, unitPrice: 0 },
@@ -63,21 +64,51 @@ export function QuoteGenerator({ quote, open, onOpenChange }: QuoteGeneratorProp
       toast({ title: 'Add at least one line item', variant: 'destructive' });
       return;
     }
-    const result = await quoteTemplatesApi.save({
-      name: templateName.trim(),
-      items: validItems,
-      notes: notes || null,
-      terms: terms || null,
-      validity_days: validityDays,
-    });
-    if (result.success) {
-      toast({ title: 'Template saved' });
-      setTemplateName('');
-      setShowSaveTemplate(false);
-      loadTemplates();
+
+    if (editingTemplate) {
+      const result = await quoteTemplatesApi.update(editingTemplate.id, {
+        name: templateName.trim(),
+        items: validItems,
+        notes: notes || null,
+        terms: terms || null,
+        validity_days: validityDays,
+      });
+      if (result.success) {
+        toast({ title: 'Template updated' });
+        setEditingTemplate(null);
+        setTemplateName('');
+        setShowSaveTemplate(false);
+        loadTemplates();
+      } else {
+        toast({ title: 'Failed to update template', variant: 'destructive' });
+      }
     } else {
-      toast({ title: 'Failed to save template', variant: 'destructive' });
+      const result = await quoteTemplatesApi.save({
+        name: templateName.trim(),
+        items: validItems,
+        notes: notes || null,
+        terms: terms || null,
+        validity_days: validityDays,
+      });
+      if (result.success) {
+        toast({ title: 'Template saved' });
+        setTemplateName('');
+        setShowSaveTemplate(false);
+        loadTemplates();
+      } else {
+        toast({ title: 'Failed to save template', variant: 'destructive' });
+      }
     }
+  };
+
+  const handleEditTemplate = (template: QuoteTemplate) => {
+    setEditingTemplate(template);
+    setTemplateName(template.name);
+    setItems(template.items.map(i => ({ ...i })));
+    setValidityDays(template.validity_days);
+    setNotes(template.notes || '');
+    setTerms(template.terms || '');
+    setShowSaveTemplate(true);
   };
 
   const handleDeleteTemplate = async (id: string, name: string) => {
@@ -191,11 +222,26 @@ export function QuoteGenerator({ quote, open, onOpenChange }: QuoteGeneratorProp
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowSaveTemplate(!showSaveTemplate)}
+                  onClick={() => { setShowSaveTemplate(!showSaveTemplate); setEditingTemplate(null); setTemplateName(''); }}
                 >
                   <Save className="h-4 w-4 mr-1" />
                   Save as Template
                 </Button>
+                {templates.length > 0 && (
+                  <Select onValueChange={(id) => {
+                    const t = templates.find(t => t.id === id);
+                    if (t) handleEditTemplate(t);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Edit template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map(t => (
+                        <SelectItem key={t.id} value={t.id}><Pencil className="h-3 w-3 inline mr-1" />{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {templates.length > 0 && (
                   <Select onValueChange={(id) => {
                     const t = templates.find(t => t.id === id);
@@ -220,8 +266,8 @@ export function QuoteGenerator({ quote, open, onOpenChange }: QuoteGeneratorProp
                     onChange={(e) => setTemplateName(e.target.value)}
                     className="flex-1"
                   />
-                  <Button size="sm" onClick={handleSaveTemplate}>Save</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowSaveTemplate(false)}>Cancel</Button>
+                  <Button size="sm" onClick={handleSaveTemplate}>{editingTemplate ? 'Update' : 'Save'}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setShowSaveTemplate(false); setEditingTemplate(null); setTemplateName(''); }}>Cancel</Button>
                 </div>
               )}
             </CardContent>

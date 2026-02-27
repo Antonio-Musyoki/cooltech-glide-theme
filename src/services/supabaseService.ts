@@ -477,6 +477,21 @@ export const quoteTemplatesApi = {
     }
   },
 
+  update: async (id: string, template: Partial<Omit<QuoteTemplate, 'id' | 'created_at' | 'updated_at'>>): Promise<ApiResponse<QuoteTemplate>> => {
+    try {
+      const { data, error } = await supabase
+        .from('quote_templates')
+        .update(template as any)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { success: true, data: data as unknown as QuoteTemplate };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
   delete: async (id: string): Promise<ApiResponse<void>> => {
     try {
       const { error } = await supabase
