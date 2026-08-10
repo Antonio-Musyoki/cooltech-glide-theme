@@ -123,7 +123,7 @@ const BlogPost = () => {
       name: "CoolTech Refrigeration",
       logo: {
         "@type": "ImageObject",
-        url: "https://cooltech-glide-theme.lovable.app/favicon.ico",
+        url: "https://cooltechrefrigeration.co.ke/favicon.ico",
       },
     },
     datePublished: publishedDate,
