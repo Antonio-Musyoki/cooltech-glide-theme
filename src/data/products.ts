@@ -47,65 +47,67 @@ export const getProductById = (id: string): Product | undefined => {
 export const services: Service[] = [
   {
     id: "cold-room",
-    name: "Cold Room Solutions",
-    description: "Complete cold room assembly, repair, and maintenance services for commercial and industrial applications.",
+    name: "Cold Room Repair & Installation",
+    description: "Complete cold room design, installation, repair and maintenance for commercial and industrial use.",
     icon: "Snowflake",
     features: [
       "Custom cold room design & installation",
+      "Panel, door & floor repairs",
       "Regular maintenance contracts",
-      "24/7 emergency repairs",
       "Temperature monitoring systems",
     ],
   },
   {
-    id: "refrigeration",
-    name: "Refrigeration Services",
-    description: "Expert refrigeration unit maintenance and repairs for all commercial refrigeration equipment.",
+    id: "fridge-repair",
+    name: "Fridge & Freezer Repair",
+    description: "Repair and servicing of fridges, deep freezers and display freezers for homes and businesses.",
     icon: "Thermometer",
     features: [
-      "Commercial freezer repairs",
-      "Walk-in cooler maintenance",
-      "Display case servicing",
-      "Compressor replacements",
-    ],
-  },
-  {
-    id: "hvac",
-    name: "HVAC Systems",
-    description: "Residential and commercial HVAC system installation, maintenance, and optimization.",
-    icon: "Wind",
-    features: [
-      "Central AC installation",
-      "Ductwork design & install",
-      "Energy efficiency audits",
-      "Ventilation solutions",
+      "Domestic & commercial fridge repair",
+      "Deep freezer servicing",
+      "Display freezer maintenance",
+      "Compressor & gas replacement",
     ],
   },
   {
     id: "ac",
-    name: "Air Conditioning",
-    description: "Professional AC assembly, maintenance, and repair for homes and businesses.",
+    name: "Air Conditioner Repair & Installation",
+    description: "Professional air conditioner supply, installation, servicing and repair.",
     icon: "Fan",
     features: [
-      "Split AC installation",
-      "Regular AC servicing",
+      "Split & central AC installation",
+      "Routine AC servicing",
       "Gas refilling",
-      "Thermostat upgrades",
+      "Fault diagnosis & repair",
+    ],
+  },
+  {
+    id: "appliance-repair",
+    name: "Washing Machine & Microwave Repair",
+    description: "Fast, reliable repair of washing machines, microwaves and other household appliances.",
+    icon: "Wind",
+    features: [
+      "Washing machine repair",
+      "Microwave repair",
+      "Spare parts replacement",
+      "On-site diagnosis",
     ],
   },
 ];
 
 export const categories = [
-  "Ice Block Machines",
+  "Ice Cream Machines",
   "Popsicle Machines",
   "Ice Cream Trolleys",
   "Ice Cream Moulds",
   "Ice Cream Sticks",
   "Ice Boxes / Cooler Boxes",
-  "Ice Cubes Machines",
+  "Deep Freezers",
+  "Display Freezers",
   "Salad Oil ATM",
   "Milk ATM",
 ];
+
 
 export const formatPrice = (price: number): string => {
   return new Intl.NumberFormat("en-KE", {
