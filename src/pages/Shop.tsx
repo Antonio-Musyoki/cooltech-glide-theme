@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { categories, formatPrice } from "@/data/products";
+import { categories, formatPrice, formatPriceOrQuote, isQuoteOnly } from "@/data/products";
 import { Eye, ShoppingCart, Search, Filter, Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
