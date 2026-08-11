@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Pencil, Trash2, Search, Upload, Loader2, X, Image as ImageIcon } from 'lucide-react';
 import { categories, formatPrice } from '@/data/products';
+import { optimizeImage, formatBytes } from '@/lib/image-optimization';
 import { productsApi, Product } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
@@ -23,6 +24,7 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
@@ -168,19 +170,45 @@ export default function AdminProducts() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery: boolean = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
 
-    const result = await productsApi.uploadImage(file);
-    if (result.success && result.data?.url) {
-      if (isGallery) {
-        setFormData(prev => ({ ...prev, images: [...prev.images, result.data!.url] }));
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please choose an image file', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum size is 10MB', variant: 'destructive' });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const { optimized, originalSize, optimizedSize } = await optimizeImage(file);
+      const result = await productsApi.uploadImage(optimized);
+      if (result.success && result.data?.url) {
+        if (isGallery) {
+          setFormData(prev => ({ ...prev, images: [...prev.images, result.data!.url] }));
+        } else {
+          setFormData(prev => ({ ...prev, image_url: result.data!.url }));
+        }
+        toast({
+          title: 'Image uploaded',
+          description: `${formatBytes(originalSize)} → ${formatBytes(optimizedSize)}`,
+        });
       } else {
-        setFormData(prev => ({ ...prev, image_url: result.data!.url }));
+        toast({ title: 'Failed to upload image', description: result.error, variant: 'destructive' });
       }
-      toast({ title: 'Image uploaded' });
-    } else {
-      toast({ title: 'Failed to upload image', variant: 'destructive' });
+    } catch (err) {
+      toast({
+        title: 'Failed to upload image',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
+
 
   const addImageUrl = () => {
     if (newImageUrl.trim()) {
@@ -355,14 +383,22 @@ export default function AdminProducts() {
                     </div>
                   ) : (
                     <label className="w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary">
-                      <Upload className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground mt-1">Upload</span>
+                      {isUploading ? (
+                        <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                      ) : (
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                      )}
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {isUploading ? 'Uploading...' : 'Upload'}
+                      </span>
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
+                        disabled={isUploading}
                         onChange={(e) => handleImageUpload(e, false)}
                       />
+
                     </label>
                   )}
                   <div className="flex-1">
@@ -466,14 +502,22 @@ export default function AdminProducts() {
                   
                   {/* Upload Button */}
                   <label className="aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary">
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground mt-1">Upload</span>
+                    {isUploading ? (
+                      <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                    ) : (
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                    )}
+                    <span className="text-xs text-muted-foreground mt-1">
+                      {isUploading ? 'Uploading...' : 'Upload'}
+                    </span>
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
+                      disabled={isUploading}
                       onChange={(e) => handleImageUpload(e, true)}
                     />
+
                   </label>
                 </div>
 

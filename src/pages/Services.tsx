@@ -76,13 +76,14 @@ const Services = () => {
                                 Book This Service
                               </Button>
                             </Link>
-                            <Link to="/quote">
-                              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                                Get a Quote
+                            <Link to={`/quote?service=${service.id}`}>
+                              <Button variant="quote" size="lg" className="w-full sm:w-auto">
+                                Request a Quote
                                 <ArrowRight className="h-5 w-5 ml-2" />
                               </Button>
                             </Link>
                           </div>
+
                         </div>
                       </div>
                     </Card>

@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { categories, formatPrice } from "@/data/products";
+import { categories, formatPrice, formatPriceOrQuote, isQuoteOnly } from "@/data/products";
 import { Eye, ShoppingCart, Search, Filter, Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
@@ -182,7 +182,9 @@ const Shop = () => {
 
                             <CardFooter className="flex flex-col gap-3">
                               <div className="w-full flex items-center justify-between">
-                                <span className="text-xl font-bold text-foreground">{formatPrice(product.price)}</span>
+                                <span className={isQuoteOnly(product.price) ? "text-base font-semibold text-primary" : "text-xl font-bold text-foreground"}>
+                                  {formatPriceOrQuote(product.price)}
+                                </span>
                               </div>
                               <div className="w-full flex gap-2">
                                 <Link to={`/product/${product.id}`} className="flex-1">
@@ -190,13 +192,15 @@ const Shop = () => {
                                     View Details
                                   </Button>
                                 </Link>
-                                <Link to={`/quote?product=${product.id}`}>
-                                  <Button variant="default" size="sm">
-                                    <ShoppingCart className="h-4 w-4" />
+                                <Link to={`/quote?product=${product.id}`} className="flex-1">
+                                  <Button variant="default" size="sm" className="w-full">
+                                    <ShoppingCart className="h-4 w-4 mr-1" />
+                                    Request Quote
                                   </Button>
                                 </Link>
                               </div>
                             </CardFooter>
+
                           </Card>
                         ))}
                       </div>

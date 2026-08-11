@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatPrice } from "@/data/products";
+import { formatPrice, formatPriceOrQuote, isQuoteOnly } from "@/data/products";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { 
@@ -215,10 +215,13 @@ const ProductDetail = () => {
                   
                   <div className="flex items-baseline gap-3">
                     <span className="text-3xl font-bold text-primary">
-                      {formatPrice(product.price)}
+                      {formatPriceOrQuote(product.price)}
                     </span>
-                    <span className="text-muted-foreground">VAT Inclusive</span>
+                    <span className="text-muted-foreground">
+                      {isQuoteOnly(product.price) ? "Request a quote for pricing" : "VAT Inclusive"}
+                    </span>
                   </div>
+
                 </div>
 
                 <p className="text-muted-foreground text-lg leading-relaxed">
@@ -340,9 +343,10 @@ const ProductDetail = () => {
                       <CardTitle className="text-lg line-clamp-2">{relatedProduct.name}</CardTitle>
                     </CardHeader>
                     <CardContent className="pb-3">
-                      <span className="text-xl font-bold text-foreground">
-                        {formatPrice(relatedProduct.price)}
+                      <span className="text-lg font-bold text-foreground">
+                        {formatPriceOrQuote(relatedProduct.price)}
                       </span>
+
                     </CardContent>
                     <CardFooter>
                       <Link to={`/product/${relatedProduct.id}`} className="w-full">

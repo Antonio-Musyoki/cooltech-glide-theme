@@ -117,3 +117,9 @@ export const formatPrice = (price: number): string => {
     maximumFractionDigits: 0,
   }).format(price);
 };
+
+// Products without a price (0 / null) are quote-only
+export const isQuoteOnly = (price?: number | null): boolean => !price || price <= 0;
+
+export const formatPriceOrQuote = (price?: number | null): string =>
+  isQuoteOnly(price) ? "Price on request" : formatPrice(price as number);

@@ -4,18 +4,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { products, services } from "@/data/products";
+import { services } from "@/data/products";
 import { FileText, Send, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { quotesApi, QuoteRequest } from "@/services/supabaseService";
+import { quotesApi, productsApi, QuoteRequest } from "@/services/supabaseService";
 import { useToast } from "@/hooks/use-toast";
 
 const Quote = () => {
   const [searchParams] = useSearchParams();
   const preselectedProduct = searchParams.get("product") || "";
-  
+  const preselectedService = searchParams.get("service") || "";
+  const [subject, setSubject] = useState<string>("");
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -27,6 +29,35 @@ const Quote = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (preselectedService) {
+      const service = services.find((s) => s.id === preselectedService);
+      if (service) {
+        setSubject(service.name);
+        setFormData((prev) => ({
+          ...prev,
+          service_type: "service",
+          details: prev.details || `I would like a quote for: ${service.name}.\n\n`,
+        }));
+      }
+      return;
+    }
+
+    if (preselectedProduct) {
+      productsApi.getById(preselectedProduct).then((res) => {
+        if (res.data) {
+          setSubject(res.data.name);
+          setFormData((prev) => ({
+            ...prev,
+            service_type: "product",
+            details: prev.details || `I would like a quote for: ${res.data!.name}.\n\nQuantity: `,
+          }));
+        }
+      });
+    }
+  }, [preselectedProduct, preselectedService]);
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -37,8 +68,9 @@ const Quote = () => {
       phone: formData.phone || undefined,
       company: formData.company || undefined,
       service_type: formData.service_type || undefined,
-      message: formData.details || undefined,
+      message: [subject ? `Item: ${subject}` : "", formData.details].filter(Boolean).join("\n") || undefined,
     };
+
 
     const result = await quotesApi.submit(payload);
     
@@ -88,8 +120,11 @@ const Quote = () => {
               </h1>
             </div>
             <p className="text-primary-foreground/80 max-w-2xl">
-              Fill out the form below and our team will provide you with a detailed quote within 24 hours.
+              {subject
+                ? `You're requesting a quote for ${subject}. Fill in your details and we'll respond within 24 hours.`
+                : "Fill out the form below and our team will provide you with a detailed quote within 24 hours."}
             </p>
+
           </div>
         </section>
 

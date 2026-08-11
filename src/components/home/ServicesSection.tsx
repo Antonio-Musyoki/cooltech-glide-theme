@@ -62,12 +62,18 @@ export const ServicesSection = () => {
                         Book Service
                       </Button>
                     </Link>
+                    <Link to={`/quote?service=${service.id}`} className="flex-1">
+                      <Button variant="outline" className="w-full">
+                        Request Quote
+                      </Button>
+                    </Link>
                     <Link to={`/services#${service.id}`}>
                       <Button variant="ghost" size="icon">
                         <ArrowRight className="h-5 w-5" />
                       </Button>
                     </Link>
                   </div>
+
                 </CardContent>
               </Card>
             );
