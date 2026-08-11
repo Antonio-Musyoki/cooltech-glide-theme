@@ -383,9 +383,15 @@ export default function AdminProducts() {
                     </div>
                   ) : (
                     <label className="w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary">
-                      <Upload className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground mt-1">Upload</span>
-                      <input
+                      {isUploading ? (
+                        <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                      ) : (
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                      )}
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {isUploading ? 'Uploading...' : 'Upload'}
+                      </span>
+
                         type="file"
                         accept="image/*"
                         className="hidden"
