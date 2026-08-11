@@ -68,8 +68,9 @@ const Quote = () => {
       phone: formData.phone || undefined,
       company: formData.company || undefined,
       service_type: formData.service_type || undefined,
-      message: formData.details || undefined,
+      message: [subject ? `Item: ${subject}` : "", formData.details].filter(Boolean).join("\n") || undefined,
     };
+
 
     const result = await quotesApi.submit(payload);
     
@@ -119,8 +120,11 @@ const Quote = () => {
               </h1>
             </div>
             <p className="text-primary-foreground/80 max-w-2xl">
-              Fill out the form below and our team will provide you with a detailed quote within 24 hours.
+              {subject
+                ? `You're requesting a quote for ${subject}. Fill in your details and we'll respond within 24 hours.`
+                : "Fill out the form below and our team will provide you with a detailed quote within 24 hours."}
             </p>
+
           </div>
         </section>
 
