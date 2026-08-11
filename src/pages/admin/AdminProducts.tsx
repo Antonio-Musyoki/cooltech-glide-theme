@@ -391,12 +391,14 @@ export default function AdminProducts() {
                       <span className="text-xs text-muted-foreground mt-1">
                         {isUploading ? 'Uploading...' : 'Upload'}
                       </span>
-
+                      <input
                         type="file"
                         accept="image/*"
                         className="hidden"
+                        disabled={isUploading}
                         onChange={(e) => handleImageUpload(e, false)}
                       />
+
                     </label>
                   )}
                   <div className="flex-1">
