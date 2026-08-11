@@ -215,10 +215,13 @@ const ProductDetail = () => {
                   
                   <div className="flex items-baseline gap-3">
                     <span className="text-3xl font-bold text-primary">
-                      {formatPrice(product.price)}
+                      {formatPriceOrQuote(product.price)}
                     </span>
-                    <span className="text-muted-foreground">VAT Inclusive</span>
+                    <span className="text-muted-foreground">
+                      {isQuoteOnly(product.price) ? "Request a quote for pricing" : "VAT Inclusive"}
+                    </span>
                   </div>
+
                 </div>
 
                 <p className="text-muted-foreground text-lg leading-relaxed">

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/data/products";
+import { formatPriceOrQuote, isQuoteOnly } from "@/data/products";
 import { ArrowRight, Eye, ShoppingCart, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
