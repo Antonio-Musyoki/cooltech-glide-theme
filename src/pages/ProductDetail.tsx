@@ -343,9 +343,10 @@ const ProductDetail = () => {
                       <CardTitle className="text-lg line-clamp-2">{relatedProduct.name}</CardTitle>
                     </CardHeader>
                     <CardContent className="pb-3">
-                      <span className="text-xl font-bold text-foreground">
-                        {formatPrice(relatedProduct.price)}
+                      <span className="text-lg font-bold text-foreground">
+                        {formatPriceOrQuote(relatedProduct.price)}
                       </span>
+
                     </CardContent>
                     <CardFooter>
                       <Link to={`/product/${relatedProduct.id}`} className="w-full">
