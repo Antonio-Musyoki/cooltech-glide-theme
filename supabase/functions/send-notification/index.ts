@@ -8,15 +8,22 @@ const ALLOWED_ORIGINS = [
   "https://cooltech-glide-theme.lovable.app",
 ];
 
+const isAllowedOrigin = (origin: string) =>
+  ALLOWED_ORIGINS.includes(origin) ||
+  /^https:\/\/[a-z0-9-]+\.lovable\.app$/.test(origin) ||
+  /^http:\/\/localhost(:\d+)?$/.test(origin);
+
 const getCorsHeaders = (req: Request) => {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
+    "Vary": "Origin",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };
 };
+
 
 const ADMIN_EMAILS = [
   "antoniomusyoki@gmail.com",
