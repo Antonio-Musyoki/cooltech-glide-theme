@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { productsApi, Product } from "@/services/supabaseService";
+import { MpesaPayButton } from "@/components/MpesaPayButton";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
