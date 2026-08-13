@@ -253,12 +253,23 @@ const ProductDetail = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                  <Link to={`/quote?product=${product.id}`} className="flex-1">
-                    <Button size="lg" className="w-full gap-2">
-                      <FileText className="h-5 w-5" />
-                      Request Quote
-                    </Button>
-                  </Link>
+                  {isQuoteOnly(product.price) ? (
+                    <Link to={`/quote?product=${product.id}`} className="flex-1">
+                      <Button size="lg" className="w-full gap-2">
+                        <FileText className="h-5 w-5" />
+                        Request Quote
+                      </Button>
+                    </Link>
+                  ) : (
+                    <div className="flex-1">
+                      <MpesaPayButton
+                        productId={product.id}
+                        productName={product.name}
+                        price={Number(product.price)}
+                        className="w-full"
+                      />
+                    </div>
+                  )}
                   <Link to="/contact" className="flex-1">
                     <Button size="lg" variant="outline" className="w-full gap-2">
                       <Phone className="h-5 w-5" />
@@ -266,6 +277,15 @@ const ProductDetail = () => {
                     </Button>
                   </Link>
                 </div>
+                {!isQuoteOnly(product.price) && (
+                  <Link
+                    to={`/quote?product=${product.id}`}
+                    className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Prefer a formal quote? Request one here
+                  </Link>
+                )}
 
                 {/* Trust Badges */}
                 <div className="grid grid-cols-3 gap-4 pt-6 border-t border-border">
