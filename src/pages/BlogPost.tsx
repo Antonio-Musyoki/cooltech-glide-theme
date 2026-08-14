@@ -299,7 +299,7 @@ const BlogPost = () => {
                 prose-ul:my-4 prose-ol:my-4
                 prose-blockquote:border-primary prose-blockquote:text-muted-foreground"
             >
-              {renderContent(post.content)}
+              <div dangerouslySetInnerHTML={{ __html: sanitizeContent(post.content) }} />
             </div>
 
             {/* Tags */}
