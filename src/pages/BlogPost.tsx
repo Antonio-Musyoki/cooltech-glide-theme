@@ -243,22 +243,7 @@ const BlogPost = () => {
                 prose-ul:my-4 prose-ol:my-4
                 prose-blockquote:border-primary prose-blockquote:text-muted-foreground"
             >
-              {post.content.split("\n").map((line, index) => {
-                if (line.startsWith("# ")) {
-                  return <h1 key={index}>{line.replace("# ", "")}</h1>;
-                } else if (line.startsWith("## ")) {
-                  return <h2 key={index}>{line.replace("## ", "")}</h2>;
-                } else if (line.startsWith("### ")) {
-                  return <h3 key={index}>{line.replace("### ", "")}</h3>;
-                } else if (line.startsWith("- ")) {
-                  return <li key={index}>{line.replace("- ", "")}</li>;
-                } else if (line.match(/^\d+\. /)) {
-                  return <li key={index}>{line.replace(/^\d+\. /, "")}</li>;
-                } else if (line.trim()) {
-                  return <p key={index}>{line}</p>;
-                }
-                return null;
-              })}
+              {renderContent(post.content)}
             </div>
 
             {/* Tags */}
