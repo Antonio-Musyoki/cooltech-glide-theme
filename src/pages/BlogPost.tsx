@@ -10,6 +10,62 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import DOMPurify from "dompurify";
+
+/**
+ * Blog content may be authored as HTML (TipTap editor) or lightweight markdown.
+ * Everything is sanitized with DOMPurify before rendering to prevent stored XSS.
+ */
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const markdownToHtml = (content: string) => {
+  const lines = content.split("\n");
+  const html: string[] = [];
+  let inList = false;
+
+  const closeList = () => {
+    if (inList) {
+      html.push("</ul>");
+      inList = false;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = escapeHtml(rawLine);
+    if (line.startsWith("### ")) {
+      closeList();
+      html.push(`<h3>${line.slice(4)}</h3>`);
+    } else if (line.startsWith("## ")) {
+      closeList();
+      html.push(`<h2>${line.slice(3)}</h2>`);
+    } else if (line.startsWith("# ")) {
+      closeList();
+      html.push(`<h1>${line.slice(2)}</h1>`);
+    } else if (line.startsWith("- ") || /^\d+\. /.test(line)) {
+      if (!inList) {
+        html.push("<ul>");
+        inList = true;
+      }
+      html.push(`<li>${line.replace(/^(- |\d+\. )/, "")}</li>`);
+    } else if (line.trim()) {
+      closeList();
+      html.push(`<p>${line}</p>`);
+    }
+  }
+  closeList();
+  return html.join("");
+};
+
+const sanitizeContent = (content: string) => {
+  const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(content);
+  const html = looksLikeHtml ? content : markdownToHtml(content);
+  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+};
 
 interface BlogPostData {
   id: string;
@@ -243,22 +299,7 @@ const BlogPost = () => {
                 prose-ul:my-4 prose-ol:my-4
                 prose-blockquote:border-primary prose-blockquote:text-muted-foreground"
             >
-              {post.content.split("\n").map((line, index) => {
-                if (line.startsWith("# ")) {
-                  return <h1 key={index}>{line.replace("# ", "")}</h1>;
-                } else if (line.startsWith("## ")) {
-                  return <h2 key={index}>{line.replace("## ", "")}</h2>;
-                } else if (line.startsWith("### ")) {
-                  return <h3 key={index}>{line.replace("### ", "")}</h3>;
-                } else if (line.startsWith("- ")) {
-                  return <li key={index}>{line.replace("- ", "")}</li>;
-                } else if (line.match(/^\d+\. /)) {
-                  return <li key={index}>{line.replace(/^\d+\. /, "")}</li>;
-                } else if (line.trim()) {
-                  return <p key={index}>{line}</p>;
-                }
-                return null;
-              })}
+              <div dangerouslySetInnerHTML={{ __html: sanitizeContent(post.content) }} />
             </div>
 
             {/* Tags */}
