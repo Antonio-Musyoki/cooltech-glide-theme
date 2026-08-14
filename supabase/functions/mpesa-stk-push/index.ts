@@ -38,8 +38,8 @@ Deno.serve(async (req) => {
 
   try {
     const env = (Deno.env.get("MPESA_ENV") || "sandbox").toLowerCase();
-    const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY");
-    const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET");
+    const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY")?.trim();
+    const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET")?.trim();
     const shortcode = Deno.env.get("MPESA_SHORTCODE") || "174379";
     const passkey =
       Deno.env.get("MPESA_PASSKEY") ||
@@ -90,9 +90,11 @@ Deno.serve(async (req) => {
     const tokenRes = await fetch(`${base}/oauth/v1/generate?grant_type=client_credentials`, {
       headers: { Authorization: "Basic " + btoa(`${consumerKey}:${consumerSecret}`) },
     });
-    const tokenJson = await tokenRes.json().catch(() => ({}));
+    const tokenText = await tokenRes.text();
+    let tokenJson: any = {};
+    try { tokenJson = JSON.parse(tokenText); } catch { /* non-JSON */ }
     if (!tokenRes.ok || !tokenJson.access_token) {
-      console.error("Daraja token error", tokenRes.status, tokenJson);
+      console.error("Daraja token error", tokenRes.status, tokenText.slice(0, 300));
       return json({ error: "Could not authenticate with M-Pesa. Check your Daraja credentials." }, 502);
     }
 

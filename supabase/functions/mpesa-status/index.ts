@@ -45,8 +45,8 @@ Deno.serve(async (req) => {
 
     // Still pending — ask Daraja directly (callback may be delayed or unreachable)
     const env = (Deno.env.get("MPESA_ENV") || "sandbox").toLowerCase();
-    const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY");
-    const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET");
+    const consumerKey = Deno.env.get("MPESA_CONSUMER_KEY")?.trim();
+    const consumerSecret = Deno.env.get("MPESA_CONSUMER_SECRET")?.trim();
     const shortcode = Deno.env.get("MPESA_SHORTCODE") || "174379";
     const passkey =
       Deno.env.get("MPESA_PASSKEY") ||
